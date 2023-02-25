@@ -39,7 +39,8 @@
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="SpaceWarp">
+    <Reference Include="SpaceWarp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\SpaceWarp.dll</HintPath>
     </Reference>
     <Reference Include="System" />

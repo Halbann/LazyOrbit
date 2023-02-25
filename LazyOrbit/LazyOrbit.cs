@@ -1,13 +1,8 @@
-﻿using KSP.DebugTools;
-using KSP.Sim.impl;
-using SpaceWarp.API;
-using UnityEngine;
+﻿using UnityEngine;
 using KSP.Game;
-using System;
-using System.Runtime.CompilerServices;
-using KSP.VFX;
 using System.Collections.Generic;
 using System.Linq;
+using SpaceWarp.API.Mods;
 //using static KSP.Game.GameManager.Instance;
 
 namespace LazyOrbit
