@@ -9,3 +9,8 @@ https://github.com/X606/SpaceWarp/releases
 
 Then you need to place the extracted 'LazyOrbit' mod folder here:
 `steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Mods`
+
+# License
+
+Lazy Orbit is distributed under the CC BY-SA 4.0 license. Read about the license here before redistributing:
+https://creativecommons.org/licenses/by-sa/4.0/
