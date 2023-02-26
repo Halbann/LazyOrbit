@@ -22,8 +22,8 @@ namespace LazyOrbit
         private static float eccentricity = 0;
         private static float ascendingNode = 0;
         private static float argOfPeriapsis = 0;
-        private double bodyRadius = 600000;
-        private double apKM, peKM;
+        private static double bodyRadius = 600000;
+        private static double apKM, peKM;
 
         private static string altitudeString = altitudeKM.ToString();
         private static string semiMajorAxisString = semiMajorAxisKM.ToString();
@@ -36,12 +36,12 @@ namespace LazyOrbit
         private List<string> bodies;
         private bool selectingBody = false;
 
-        private int interfaceMode = 0;
-        private string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
+        private static int interfaceMode = 0;
+        private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
 
         private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
         private static Vector2 scrollPositionBodies;
-        private Color labelColor;
+        private static Color labelColor;
 
         public override void Initialize()
         {
