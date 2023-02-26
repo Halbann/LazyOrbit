@@ -21,6 +21,7 @@ namespace LazyOrbit
         private int windowHeight = 700;
         private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
         private static Vector2 scrollPositionBodies;
+        private static Vector2 scrollPositionVessels;
         private static Color labelColor;
 
         private static float altitudeKM = 100;
@@ -44,6 +45,18 @@ namespace LazyOrbit
         private bool selectingBody = false;
 
         private static VesselComponent activeVessel;
+        private static VesselComponent target;
+        private static List<VesselComponent> allVessels;
+        private bool selectingVessel = false;
+        private static float rendezvousDistance = 100f;
+        private static string rendezvousDistanceString = rendezvousDistance.ToString();
+
+        private static float latitude = -0.65f;
+        private static float longitude = 285f;
+        private static float height = 5f;
+        private static string latitudeString = latitude.ToString();
+        private static string longitudeString = latitude.ToString();
+        private static string heightString = height.ToString();
 
         private static InterfaceMode interfaceMode = InterfaceMode.Simple;
         private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
@@ -69,7 +82,7 @@ namespace LazyOrbit
             windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         }
 
-        public override void Initialize()
+        public override void OnInitialized()
         {
             if (loaded)
             {
@@ -88,8 +101,6 @@ namespace LazyOrbit
 
         void OnGUI()
         {
-            //activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel();
-
             if (drawUI && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
             {
                 if (boxStyle == null)
@@ -99,7 +110,7 @@ namespace LazyOrbit
                     GUIUtility.GetControlID(FocusType.Passive),
                     windowRect,
                     FillWindow,
-                    "Lazy Orbit",
+                    "Lazy Orbit v0.2.0",
                     GUILayout.Height(0),
                     GUILayout.Width(350));
             }
@@ -164,6 +175,32 @@ namespace LazyOrbit
                 SetOrbit();
         }
 
+        void LandingGUI()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Latitude (Degrees):", GUILayout.Width(windowWidth / 2));
+            latitudeString = GUILayout.TextField(latitudeString);
+            float.TryParse(latitudeString, out latitude);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Longitude (Degrees):", GUILayout.Width(windowWidth / 2));
+            longitudeString = GUILayout.TextField(longitudeString);
+            float.TryParse(longitudeString, out longitude);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Height (m):", GUILayout.Width(windowWidth / 2));
+            heightString = GUILayout.TextField(heightString);
+            float.TryParse(heightString, out height);
+            GUILayout.EndHorizontal();
+
+            BodySelectionGUI();
+
+            if (GUILayout.Button("Land"))
+                Land();
+        }
+
         void AdvancedGUI()
         {
             GUILayout.BeginHorizontal();
@@ -178,9 +215,9 @@ namespace LazyOrbit
             apStyle.normal.textColor = apKM < 1 ? warnStyle.normal.textColor : labelColor;
             peStyle.normal.textColor = peKM < 1 ? warnStyle.normal.textColor : labelColor;
             GUILayout.BeginHorizontal();
-            GUILayout.Label("AP (KM): ", apStyle, GUILayout.Width(windowWidth / 4));
+            GUILayout.Label("AP (km): ", apStyle, GUILayout.Width(windowWidth / 4));
             GUILayout.Label(apKM.ToString("n2"), apStyle, GUILayout.Width(windowWidth / 4));
-            GUILayout.Label("PE (KM): ", peStyle, GUILayout.Width(windowWidth / 4));
+            GUILayout.Label("PE (km): ", peStyle, GUILayout.Width(windowWidth / 4));
             GUILayout.Label(peKM.ToString("n2"), peStyle, GUILayout.Width(windowWidth / 4));
             GUILayout.EndHorizontal();
 
@@ -221,18 +258,53 @@ namespace LazyOrbit
                 SetOrbit();
         }
 
-        void LandingGUI()
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("This mode is not yet implemented.", warnStyle);
-            GUILayout.EndHorizontal();
-        }
-
         void RendezvousGUI()
         {
+            allVessels = GameManager.Instance.Game.SpaceSimulation.UniverseModel.GetAllVessels();
+            allVessels.Remove(activeVessel);
+            allVessels.RemoveAll(v => v.IsDebris());
+
+            if (allVessels.Count < 1)
+            {
+                GUILayout.Label("No other vessels.");
+                return;
+            }
+
+            if (target == null)
+                target = allVessels.First();
+
             GUILayout.BeginHorizontal();
-            GUILayout.Label("This mode is not yet implemented.", warnStyle);
+            GUILayout.Label("Distance (m): ", GUILayout.Width(windowWidth / 2));
+            rendezvousDistanceString = GUILayout.TextField(rendezvousDistanceString);
+            float.TryParse(rendezvousDistanceString, out rendezvousDistance);
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Target: ", GUILayout.Width(windowWidth / 2));
+            if (!selectingVessel)
+            {
+                if (GUILayout.Button(target.DisplayName))
+                    selectingVessel = true;
+            }
+            else
+            {
+                GUILayout.BeginVertical(boxStyle);
+                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150), GUILayout.Width(windowWidth / 2));
+                foreach (VesselComponent vessel in allVessels)
+                {
+                    if (GUILayout.Button(vessel.DisplayName))
+                    {
+                        target = vessel;
+                        selectingVessel = false;
+                    }
+                }
+                GUILayout.EndScrollView();
+                GUILayout.EndVertical();
+            }
+            GUILayout.EndHorizontal();
+
+            if (GUILayout.Button("Rendezvous"))
+                Rendezvous();
         }
 
         // Draws the body selection GUI.
@@ -278,7 +350,7 @@ namespace LazyOrbit
             {
                 // Set orbit using just altitude.
                 game.SpaceSimulation.Lua.TeleportToOrbit(
-                    game.ViewController.GetActiveVehicle(true)?.Guid.ToString(),
+                    activeVessel.Guid,
                     selectedBody,
                     0,
                     0,
@@ -292,7 +364,7 @@ namespace LazyOrbit
             {
                 // Set orbit using semi-major axis and other orbital parameters.
                 game.SpaceSimulation.Lua.TeleportToOrbit(
-                    game.ViewController.GetActiveVehicle(true)?.Guid.ToString(),
+                    activeVessel.Guid,
                     selectedBody,
                     inclinationDegrees,
                     eccentricity,
@@ -302,6 +374,33 @@ namespace LazyOrbit
                     0,
                     0);
             }
+        }
+
+        void Rendezvous()
+        {
+            GameInstance game = GameManager.Instance.Game;
+
+            if (target.Guid == activeVessel.Guid)
+                return;
+
+            game.SpaceSimulation.Lua.TeleportToRendezvous(
+                activeVessel.Guid,
+                target.Guid,
+                rendezvousDistance,
+                0, 0, 0, 0, 0);
+        }
+
+        void Land()
+        {
+            GameInstance game = GameManager.Instance.Game;
+
+            game.SpaceSimulation.Lua.TeleportToSurface(
+                activeVessel.Guid,
+                selectedBody,
+                height,
+                latitude,
+                longitude,
+                0);
         }
 
         #endregion

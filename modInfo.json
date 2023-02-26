@@ -1,0 +1,14 @@
+{
+  "mod_id": "LazyOrbit",
+  "name": "LazyOrbit",
+  "author": "Halban, XYZ3211",
+  "description": "A GUI for teleporting to orbit, keybind is ALT+H.",
+  "source": "https://github.com/Halbann/LazyOrbit",
+  "version": "v0.2.0",
+  "dependencies": [
+  ],
+  "ksp2_version": {
+    "min": "...",
+    "max": "... (can be * for no max version)"
+  }
+}
