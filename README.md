@@ -5,7 +5,7 @@ Lazy Orbit is a simple KSP2 mod for settings a vessel's orbit altitude. Open the
 # Installation
 
 First you need to install the Space Warp mod loader, you can download that here:
-https://spacedock.info/mod/3257/Space%20Warphttps://spacedock.info/mod/3257/Space%20Warp
+https://spacedock.info/mod/3257/Space%20Warp
 
 After running the game once with Space Warp installed, place the extracted 'LazyOrbit' mod folder here: 
 `steamapps\common\Kerbal Space Program 2\SpaceWarp\Mods`
