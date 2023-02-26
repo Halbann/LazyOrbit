@@ -39,6 +39,9 @@
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="SpaceWarp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\SpaceWarp.dll</HintPath>
@@ -74,6 +77,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(TargetDir)$(ProjectName).dll" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Mods\LazyOrbit\bin\$(ProjectName).dll"</PostBuildEvent>
+    <PostBuildEvent>"$(ProjectDir)pdb2mdb\pdb2mdb.exe" "$(TargetPath)" 
+copy /Y "$(TargetDir)$(ProjectName).dll" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\SpaceWarp\Mods\LazyOrbit\bin\$(ProjectName).dll" 
+copy /Y "$(TargetDir)$(Targetname).pdb" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\SpaceWarp\Mods\LazyOrbit\bin\" 
+copy /Y "$(TargetDir)$(Targetname).dll.mdb" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\SpaceWarp\Mods\LazyOrbit\bin\"</PostBuildEvent>
   </PropertyGroup>
 </Project>

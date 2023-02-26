@@ -3,7 +3,11 @@ using KSP.Game;
 using System.Collections.Generic;
 using System.Linq;
 using SpaceWarp.API.Mods;
-//using static KSP.Game.GameManager.Instance;
+using System.IO;
+using System.Reflection;
+using UnityEngine.SceneManagement;
+using Newtonsoft.Json;
+using KSP.Sim.impl;
 
 namespace LazyOrbit
 {
@@ -15,6 +19,9 @@ namespace LazyOrbit
         private Rect windowRect;
         private int windowWidth = 500;
         private int windowHeight = 700;
+        private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
+        private static Vector2 scrollPositionBodies;
+        private static Color labelColor;
 
         private static float altitudeKM = 100;
         private static float semiMajorAxisKM = 700;
@@ -36,12 +43,31 @@ namespace LazyOrbit
         private List<string> bodies;
         private bool selectingBody = false;
 
-        private static int interfaceMode = 0;
-        private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
+        private static VesselComponent activeVessel;
 
-        private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
-        private static Vector2 scrollPositionBodies;
-        private static Color labelColor;
+        private static InterfaceMode interfaceMode = InterfaceMode.Simple;
+        private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
+        private static string settingsPath;
+
+        private InterfaceMode CurrentInterfaceMode
+        {
+            get => interfaceMode;
+            set
+            {
+                if (value == interfaceMode) return;
+
+                interfaceMode = value;
+                if (new[] { InterfaceMode.Simple, InterfaceMode.Advanced }.Contains(interfaceMode))
+                    SaveDefaultMode(interfaceMode);
+            }
+        }
+
+        #region Main
+
+        void Awake()
+        {
+            windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
+        }
 
         public override void Initialize()
         {
@@ -49,19 +75,26 @@ namespace LazyOrbit
             {
                 Destroy(this);
             }
-
             loaded = true;
+
+            interfaceMode = GetDefaultMode();
         }
 
-        void Awake()
+        void Update()
         {
-            windowRect = new Rect((Screen.width * 0.85f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
+            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H))
+                drawUI = !drawUI;
         }
 
         void OnGUI()
         {
-            if (drawUI)
+            //activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel();
+
+            if (drawUI && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
             {
+                if (boxStyle == null)
+                    GetStyles();
+
                 windowRect = GUILayout.Window(
                     GUIUtility.GetControlID(FocusType.Passive),
                     windowRect,
@@ -72,18 +105,16 @@ namespace LazyOrbit
             }
         }
 
-        void Update()
-        {
-            //Logger.Info("Hello?");
+        #endregion
 
-            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H))
-                drawUI = !drawUI;
-        }
+        #region GUI
 
-        private void FillWindow(int windowID)
+        private void GetStyles()
         {
+            if (boxStyle != null)
+                return;
+
             boxStyle = GUI.skin.GetStyle("Box");
-            //Styles for errors and AP/PE warnings
             errorStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
             warnStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
             apStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
@@ -91,102 +122,121 @@ namespace LazyOrbit
             errorStyle.normal.textColor = Color.red;
             warnStyle.normal.textColor = Color.yellow;
             labelColor = GUI.skin.GetStyle("Label").normal.textColor;
+        }
 
+        private void FillWindow(int windowID)
+        {
             GUILayout.BeginVertical();
 
-            GUILayout.Label($"Active Vessel: {GameManager.Instance.Game.ViewController.GetActiveSimVessel().DisplayName}");
+            GUILayout.Label($"Active Vessel: {activeVessel.DisplayName}");
 
+            // Mode selection.
             GUILayout.BeginHorizontal();
-            interfaceMode = GUILayout.SelectionGrid(interfaceMode, interfaceModes, 4);
+            CurrentInterfaceMode = (InterfaceMode)GUILayout.SelectionGrid((int)CurrentInterfaceMode, interfaceModes, 4);
             GUILayout.EndHorizontal();
 
-            if (interfaceMode == 0)
+            // Draw one of the modes.
+            switch (CurrentInterfaceMode)
             {
-                //Simple mode
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Altitude (km): ", GUILayout.Width(windowWidth / 2));
-                altitudeString = GUILayout.TextField(altitudeString);
-                float.TryParse(altitudeString, out altitudeKM);
-                GUILayout.EndHorizontal();
-
-                drawBodySelection();
-
-                if (GUILayout.Button("Set Orbit"))
-                    SetOrbit();
-            }
-
-            else if (interfaceMode == 1)
-            {
-                //Advanced mode
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Semi-Major Axis (km): ", GUILayout.Width(windowWidth / 2));
-                semiMajorAxisString = GUILayout.TextField(semiMajorAxisString);
-                float.TryParse(semiMajorAxisString, out semiMajorAxisKM);
-                GUILayout.EndHorizontal();
-
-                bodyRadius = GameManager.Instance.Game.CelestialBodies.GetRadius(selectedBody) / 1000f;
-                apKM = (semiMajorAxisKM * (1 + eccentricity) - bodyRadius);
-                peKM = (semiMajorAxisKM * (1 - eccentricity) - bodyRadius);
-                apStyle.normal.textColor = (apKM < 1) ? warnStyle.normal.textColor : labelColor;
-                peStyle.normal.textColor = (peKM < 1) ? warnStyle.normal.textColor : labelColor;
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("AP (KM): ", apStyle, GUILayout.Width(windowWidth / 4));
-                GUILayout.Label(apKM.ToString("n2"), apStyle, GUILayout.Width(windowWidth / 4));
-                GUILayout.Label("PE (KM): ", peStyle, GUILayout.Width(windowWidth / 4));
-                GUILayout.Label(peKM.ToString("n2"), peStyle, GUILayout.Width(windowWidth / 4));
-                GUILayout.EndHorizontal();
-
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Inclination (Degrees): ", GUILayout.Width(windowWidth / 2));
-                inclinationString = GUILayout.TextField(inclinationString);
-                float.TryParse(inclinationString, out inclinationDegrees);
-                GUILayout.EndHorizontal();
-
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Eccentricity: ", GUILayout.Width(windowWidth / 2));
-                eccentricityString = GUILayout.TextField(eccentricityString);
-                float.TryParse(eccentricityString, out eccentricity);
-                GUILayout.EndHorizontal();
-
-                if (eccentricity >= 1 || eccentricity < 0)
-                {
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label("Eccentricity Must Be in Range [0,1)", errorStyle);
-                    GUILayout.EndHorizontal();
-                }
-
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Longitude of Ascending Node (Degrees): ", GUILayout.Width(windowWidth / 2));
-                ascendingNodeString = GUILayout.TextField(ascendingNodeString);
-                float.TryParse(ascendingNodeString, out ascendingNode);
-                GUILayout.EndHorizontal();
-
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Argument of Periapsis (Degrees): ", GUILayout.Width(windowWidth / 2));
-                argOfPeriapsisString = GUILayout.TextField(argOfPeriapsisString);
-                float.TryParse(argOfPeriapsisString, out argOfPeriapsis);
-                GUILayout.EndHorizontal();
-
-                drawBodySelection();
-
-                if (GUILayout.Button("Set Orbit"))
-                    SetOrbit();
-            }
-
-            else
-            {
-                //TODO: Implement other interface modes
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("This mode is not yet implemented.", warnStyle);
-                GUILayout.EndHorizontal();
+                case InterfaceMode.Simple: SimpleGUI(); break;
+                case InterfaceMode.Advanced: AdvancedGUI(); break;
+                case InterfaceMode.Landing: LandingGUI(); break;
+                case InterfaceMode.Rendezvous: RendezvousGUI(); break;
+                default:
+                    break;
             }
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
         }
 
-        //draws the body selection GUI
-        void drawBodySelection()
+        void SimpleGUI()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Altitude (km): ", GUILayout.Width(windowWidth / 2));
+            altitudeString = GUILayout.TextField(altitudeString);
+            float.TryParse(altitudeString, out altitudeKM);
+            GUILayout.EndHorizontal();
+
+            BodySelectionGUI();
+
+            if (GUILayout.Button("Set Orbit"))
+                SetOrbit();
+        }
+
+        void AdvancedGUI()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Semi-Major Axis (km): ", GUILayout.Width(windowWidth / 2));
+            semiMajorAxisString = GUILayout.TextField(semiMajorAxisString);
+            float.TryParse(semiMajorAxisString, out semiMajorAxisKM);
+            GUILayout.EndHorizontal();
+
+            bodyRadius = GameManager.Instance.Game.CelestialBodies.GetRadius(selectedBody) / 1000f;
+            apKM = (semiMajorAxisKM * (1 + eccentricity) - bodyRadius);
+            peKM = (semiMajorAxisKM * (1 - eccentricity) - bodyRadius);
+            apStyle.normal.textColor = apKM < 1 ? warnStyle.normal.textColor : labelColor;
+            peStyle.normal.textColor = peKM < 1 ? warnStyle.normal.textColor : labelColor;
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("AP (KM): ", apStyle, GUILayout.Width(windowWidth / 4));
+            GUILayout.Label(apKM.ToString("n2"), apStyle, GUILayout.Width(windowWidth / 4));
+            GUILayout.Label("PE (KM): ", peStyle, GUILayout.Width(windowWidth / 4));
+            GUILayout.Label(peKM.ToString("n2"), peStyle, GUILayout.Width(windowWidth / 4));
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Inclination (Degrees): ", GUILayout.Width(windowWidth / 2));
+            inclinationString = GUILayout.TextField(inclinationString);
+            float.TryParse(inclinationString, out inclinationDegrees);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Eccentricity: ", GUILayout.Width(windowWidth / 2));
+            eccentricityString = GUILayout.TextField(eccentricityString);
+            float.TryParse(eccentricityString, out eccentricity);
+            GUILayout.EndHorizontal();
+
+            if (eccentricity >= 1 || eccentricity < 0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Eccentricity Must Be in Range [0,1)", errorStyle);
+                GUILayout.EndHorizontal();
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Longitude of Ascending Node (Degrees): ", GUILayout.Width(windowWidth / 2));
+            ascendingNodeString = GUILayout.TextField(ascendingNodeString);
+            float.TryParse(ascendingNodeString, out ascendingNode);
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Argument of Periapsis (Degrees): ", GUILayout.Width(windowWidth / 2));
+            argOfPeriapsisString = GUILayout.TextField(argOfPeriapsisString);
+            float.TryParse(argOfPeriapsisString, out argOfPeriapsis);
+            GUILayout.EndHorizontal();
+
+            BodySelectionGUI();
+
+            if (GUILayout.Button("Set Orbit"))
+                SetOrbit();
+        }
+
+        void LandingGUI()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("This mode is not yet implemented.", warnStyle);
+            GUILayout.EndHorizontal();
+        }
+
+        void RendezvousGUI()
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("This mode is not yet implemented.", warnStyle);
+            GUILayout.EndHorizontal();
+        }
+
+        // Draws the body selection GUI.
+        void BodySelectionGUI()
         {
             bodies = GameManager.Instance.Game.SpaceSimulation.GetBodyNameKeys().ToList();
 
@@ -215,13 +265,18 @@ namespace LazyOrbit
             GUILayout.EndHorizontal();
         }
 
-        //sets vessel orbit according to the current interfaceMode
+        #endregion
+
+        #region Functions
+
+        // Sets vessel orbit according to the current interfaceMode.
         void SetOrbit()
         {
-            if (interfaceMode == 0)
+            GameInstance game = GameManager.Instance.Game;
+
+            if (CurrentInterfaceMode == InterfaceMode.Simple)
             {
-                //Set orbit using just altitude
-                GameInstance game = GameManager.Instance.Game;
+                // Set orbit using just altitude.
                 game.SpaceSimulation.Lua.TeleportToOrbit(
                     game.ViewController.GetActiveVehicle(true)?.Guid.ToString(),
                     selectedBody,
@@ -233,10 +288,9 @@ namespace LazyOrbit
                     0,
                     0);
             }
-            else if (interfaceMode == 1)
+            else
             {
-                //Set orbit using semi-major axis and other orbital parameters
-                GameInstance game = GameManager.Instance.Game;
+                // Set orbit using semi-major axis and other orbital parameters.
                 game.SpaceSimulation.Lua.TeleportToOrbit(
                     game.ViewController.GetActiveVehicle(true)?.Guid.ToString(),
                     selectedBody,
@@ -250,5 +304,55 @@ namespace LazyOrbit
             }
         }
 
+        #endregion
+
+        #region Settings
+
+        private void SaveDefaultMode(InterfaceMode mode)
+        {
+            if (settingsPath == null)
+                return;
+
+            LazyOrbitSettings settings = new LazyOrbitSettings()
+            {
+                defaultMode = mode
+            };
+
+            File.WriteAllText(settingsPath, JsonConvert.SerializeObject(settings));
+        }
+
+        private InterfaceMode GetDefaultMode()
+        {
+            string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            settingsPath = Path.Combine(assemblyFolder, "Settings.json");
+
+            LazyOrbitSettings settings;
+            try
+            {
+                settings = JsonConvert.DeserializeObject<LazyOrbitSettings>(File.ReadAllText(settingsPath));
+            }
+            catch (FileNotFoundException)
+            {
+                Logger.Info("Creating a new LazyOrbit settings file.");
+                settings = new LazyOrbitSettings();
+            }
+
+            return settings.defaultMode;
+        }
+
+        #endregion
+    }
+
+    public class LazyOrbitSettings
+    {
+        public InterfaceMode defaultMode = InterfaceMode.Simple;
+    }
+
+    public enum InterfaceMode
+    {
+        Simple,
+        Advanced,
+        Landing,
+        Rendezvous,
     }
 }
