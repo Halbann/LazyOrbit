@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\SpaceWarp\core\0Harmony.dll</HintPath>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
@@ -42,9 +45,8 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="SpaceWarp, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\SpaceWarp.dll</HintPath>
+    <Reference Include="SpaceWarp">
+      <HintPath>C:\Users\Lawrence\Downloads\SpaceWarp.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,6 +56,9 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
@@ -69,6 +74,12 @@
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\KSP2_x64_Data\Managed\UnityEngine.UIModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

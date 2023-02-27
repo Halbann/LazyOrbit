@@ -1,20 +1,42 @@
-using UnityEngine;
-using KSP.Game;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using SpaceWarp.API.Mods;
 using System.IO;
 using System.Reflection;
-using UnityEngine.SceneManagement;
+using System.Collections;
+
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 using Newtonsoft.Json;
+
 using KSP.Sim.impl;
+using KSP.Game;
+using KSP.Api.CoreTypes;
+using KSP.Sim.ResourceSystem;
+using KSP.Api;
+using KSP.UI.Flight;
+using KSP.UI.Binding;
+
+using SpaceWarp.API.Mods;
+using HarmonyLib;
+
 
 namespace LazyOrbit
 {
     [MainMod]
     public class LazyOrbit : Mod
     {
-        static bool loaded = false;
+        #region Fields
+
+        // Main.
+        public static bool loaded = false;
+        private static GameObject appButton;
+        public static LazyOrbit instance;
+        private static string settingsPath;
+
+        // GUI.
+        private static bool guiLoaded = false;
         private bool drawUI = false;
         private Rect windowRect;
         private int windowWidth = 500;
@@ -24,6 +46,7 @@ namespace LazyOrbit
         private static Vector2 scrollPositionVessels;
         private static Color labelColor;
 
+        // Orbit.
         private static float altitudeKM = 100;
         private static float semiMajorAxisKM = 700;
         private static float inclinationDegrees = 0;
@@ -40,27 +63,30 @@ namespace LazyOrbit
         private static string ascendingNodeString = ascendingNode.ToString();
         private static string argOfPeriapsisString = argOfPeriapsis.ToString();
 
+        // Body selection.
         private string selectedBody = "Kerbin";
         private List<string> bodies;
         private bool selectingBody = false;
 
+        // Rendezvous.
         private static VesselComponent activeVessel;
         private static VesselComponent target;
         private static List<VesselComponent> allVessels;
-        private bool selectingVessel = false;
+        private static bool selectingVessel = false;
         private static float rendezvousDistance = 100f;
         private static string rendezvousDistanceString = rendezvousDistance.ToString();
 
+        // Landing.
         private static float latitude = -0.65f;
         private static float longitude = 285f;
         private static float height = 5f;
         private static string latitudeString = latitude.ToString();
-        private static string longitudeString = latitude.ToString();
+        private static string longitudeString = longitude.ToString();
         private static string heightString = height.ToString();
 
+        // Interface modes.
         private static InterfaceMode interfaceMode = InterfaceMode.Simple;
         private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
-        private static string settingsPath;
 
         private InterfaceMode CurrentInterfaceMode
         {
@@ -75,6 +101,8 @@ namespace LazyOrbit
             }
         }
 
+        #endregion
+
         #region Main
 
         void Awake()
@@ -88,29 +116,36 @@ namespace LazyOrbit
             {
                 Destroy(this);
             }
+
             loaded = true;
+            instance = this;
 
             interfaceMode = GetDefaultMode();
         }
 
         void Update()
         {
+            //if (new[] { GameState.FlightView, GameState.Map3DView }.Contains(GameManager.Instance.Game.GlobalGameState.GetState()))
+            //    return;
+
             if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H))
                 drawUI = !drawUI;
         }
 
         void OnGUI()
         {
-            if (drawUI && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
+            if (drawUI
+                && GameManager.Instance.Game.GlobalGameState.GetState() == GameState.FlightView
+                && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
             {
-                if (boxStyle == null)
+                if (!guiLoaded)
                     GetStyles();
 
                 windowRect = GUILayout.Window(
                     GUIUtility.GetControlID(FocusType.Passive),
                     windowRect,
                     FillWindow,
-                    "Lazy Orbit v0.2.0",
+                    "Lazy Orbit v0.3.0",
                     GUILayout.Height(0),
                     GUILayout.Width(350));
             }
@@ -133,6 +168,8 @@ namespace LazyOrbit
             errorStyle.normal.textColor = Color.red;
             warnStyle.normal.textColor = Color.yellow;
             labelColor = GUI.skin.GetStyle("Label").normal.textColor;
+
+            guiLoaded = true;
         }
 
         private void FillWindow(int windowID)
@@ -322,7 +359,7 @@ namespace LazyOrbit
             else
             {
                 GUILayout.BeginVertical(boxStyle);
-                scrollPositionBodies = GUILayout.BeginScrollView(scrollPositionBodies, false, true, GUILayout.Height(150), GUILayout.Width(windowWidth / 2));
+                scrollPositionBodies = GUILayout.BeginScrollView(scrollPositionBodies, false, true, GUILayout.Height(150));
                 foreach (string body in bodies)
                 {
                     if (GUILayout.Button(body))
@@ -432,11 +469,131 @@ namespace LazyOrbit
             }
             catch (FileNotFoundException)
             {
-                Logger.Info("Creating a new LazyOrbit settings file.");
                 settings = new LazyOrbitSettings();
             }
 
             return settings.defaultMode;
+        }
+
+        #endregion
+
+        #region Button
+
+        public void CreateButton()
+        {
+            if (appButton != null)
+                return;
+
+            StartCoroutine(CreateButtonRoutine());
+        }
+
+        private IEnumerator CreateButtonRoutine()
+        {
+            // I don't like this either. Pls fix.
+            yield return new WaitForSeconds(1);
+
+            Sprite icon = Sprite.Create(CreateCircleTexture(24, 11, 2, Color.white), new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
+            appButton = AddButton("Lazy Orbit", icon, "BTN-LazyOrbitButton", ToggleButton);
+        }
+
+        GameObject AddButton(string buttonText, Sprite buttonIcon, string buttonId, Action<bool> function)
+        {
+            // Find the resource manager button and "others" group.
+
+            // Say the magic words...
+            GameObject list = GameObject.Find("GameManager/Default Game Instance(Clone)/UI Manager(Clone)/Popup Canvas/Container/ButtonBar/BTN-App-Tray/appbar-others-group");
+            GameObject resourceManger = list.GetChild("BTN-Resource-Manager");
+
+            if (list == null || resourceManger == null)
+            {
+                Logger.Info("Couldn't find appbar.");
+                return null;
+            }
+
+            // Clone the resource manager button.
+            GameObject appButton = Instantiate(resourceManger, list.transform);
+            appButton.name = "LazyOrbitButton";
+
+            // Change the text.
+            TextMeshProUGUI text = appButton.GetChild("Content").GetChild("TXT-title").GetComponent<TextMeshProUGUI>();
+            text.text = "Lazy Orbit";
+            //text.gameObject.SetActive(true);
+
+            // Change the icon.
+            GameObject icon = appButton.GetChild("Content").GetChild("GRP-icon");
+            Image image = icon.GetChild("ICO-asset").GetComponent<Image>();
+            image.sprite = buttonIcon;
+
+            // Add our function call to the toggle.
+            ToggleExtended utoggle = appButton.GetComponent<ToggleExtended>();
+            utoggle.onValueChanged.AddListener(state => function(state));
+
+            // Fix the indicator's position and orientation.
+            //GameObject indicator = icon.GetChild("ELE-state");
+            //indicator.transform.localPosition = new Vector3(-18, 0, 0);
+            //indicator.transform.eulerAngles = new Vector3(0, 0, 90);
+
+            // Set the initial state of the toggle.
+            UIValue_WriteBool_Toggle toggle = appButton.GetComponent<UIValue_WriteBool_Toggle>();
+            toggle.BindValue(new Property<bool>(false));
+
+            // Bind the action to close the tray after pressing the button.
+            IAction action = resourceManger.GetComponent<UIAction_Void_Toggle>().Action;
+            appButton.GetComponent<UIAction_Void_Toggle>().BindAction(action);
+
+            Logger.Info($"Added appbar button: {buttonId}");
+
+            return appButton;
+        }
+
+        void ToggleButton(bool toggle) =>
+            drawUI = toggle;
+
+        private static Texture2D CreateCircleTexture(int size, int radius, int lineThickness, Color colour)
+        {
+            // Create new texture and clear it.
+
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Trilinear;
+
+            Color[] clearColours = new Color[size * size];
+            for (int i = 0; i < clearColours.Length; i++)
+                clearColours[i] = Color.clear;
+
+            texture.SetPixels(clearColours);
+
+            DrawCircle(radius, size, texture, colour, lineThickness);
+            DrawCircle(radius - 3, size, texture, colour, lineThickness);
+            DrawCircle(radius - 3, size, texture, colour, lineThickness);
+
+            // Update texture.
+            texture.Apply();
+
+            return texture;
+        }
+
+        static void DrawCircle(int radius, int size, Texture2D texture, Color colour, int lineThickness)
+        {
+            // Draw circle.
+
+            float rSquared = radius * radius;
+            int x = size / 2;
+            int y = size / 2;
+
+            for (int u = x - radius; u < x + radius + 1; u++)
+                for (int v = y - radius; v < y + radius + 1; v++)
+                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
+                        texture.SetPixel(u, v, colour);
+
+            // Remove interior.
+
+            radius -= lineThickness;
+            rSquared = radius * radius;
+
+            for (int u = x - radius; u < x + radius + 1; u++)
+                for (int v = y - radius; v < y + radius + 1; v++)
+                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
+                        texture.SetPixel(u, v, Color.clear);
         }
 
         #endregion
@@ -454,4 +611,34 @@ namespace LazyOrbit
         Landing,
         Rendezvous,
     }
+
+    [HarmonyPatch(typeof(UIFlightHud))]
+    [HarmonyPatch("Start")]
+    class LazyOrbitAppBarPatcher
+    {
+        public static void Postfix(UIFlightHud __instance) =>
+            LazyOrbit.instance.CreateButton();
+    }
 }
+
+
+/*private GUISkin _spaceWarpConsoleSkin = null;
+public virtual GUISkin Skin
+{
+    get
+    {
+        if (_spaceWarpConsoleSkin == null)
+        {
+            ResourceManager.TryGetAsset($"space_warp/swconsoleui/spacewarpConsole.guiskin", out _spaceWarpConsoleSkin);
+        }
+
+        return _spaceWarpConsoleSkin;
+    }
+}
+
+public void OnGUI()
+{
+    GUI.skin = Skin;
+
+}
+*/
