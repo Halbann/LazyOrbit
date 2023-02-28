@@ -222,6 +222,7 @@ namespace LazyOrbit
             }
 
             GUILayout.EndVertical();
+            GUI.DragWindow(new Rect(0, 0, 10000, 500));
         }
 
         void SimpleGUI()
