@@ -33,7 +33,15 @@ namespace LazyOrbit
         public static bool loaded = false;
         private static GameObject appButton;
         public static LazyOrbit instance;
-        private static string settingsPath;
+
+        // Paths.
+        private static string _assemblyFolder;
+        private static string AssemblyFolder =>
+            _assemblyFolder ?? (_assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+
+        private static string _settingsPath;
+        private static string SettingsPath =>
+            _settingsPath ?? (_settingsPath = Path.Combine(AssemblyFolder, "Settings.json"));
 
         // GUI.
         private static bool guiLoaded = false;
@@ -45,6 +53,9 @@ namespace LazyOrbit
         private static Vector2 scrollPositionBodies;
         private static Vector2 scrollPositionVessels;
         private static Color labelColor;
+        private static GameState[] validScenes = new[] { GameState.FlightView, GameState.Map3DView };
+
+        private static bool ValidScene => validScenes.Contains(GameManager.Instance.Game.GlobalGameState.GetState());
 
         // Orbit.
         private static float altitudeKM = 100;
@@ -120,23 +131,21 @@ namespace LazyOrbit
             loaded = true;
             instance = this;
 
+            gameObject.hideFlags = HideFlags.HideAndDontSave;
+            DontDestroyOnLoad(gameObject);
+
             interfaceMode = GetDefaultMode();
         }
 
         void Update()
         {
-            //if (new[] { GameState.FlightView, GameState.Map3DView }.Contains(GameManager.Instance.Game.GlobalGameState.GetState()))
-            //    return;
-
-            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H))
+            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
                 drawUI = !drawUI;
         }
 
         void OnGUI()
         {
-            if (drawUI
-                && GameManager.Instance.Game.GlobalGameState.GetState() == GameState.FlightView
-                && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
+            if (drawUI && ValidScene && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
             {
                 if (!guiLoaded)
                     GetStyles();
@@ -446,26 +455,20 @@ namespace LazyOrbit
 
         private void SaveDefaultMode(InterfaceMode mode)
         {
-            if (settingsPath == null)
-                return;
-
             LazyOrbitSettings settings = new LazyOrbitSettings()
             {
                 defaultMode = mode
             };
 
-            File.WriteAllText(settingsPath, JsonConvert.SerializeObject(settings));
+            File.WriteAllText(SettingsPath, JsonConvert.SerializeObject(settings));
         }
 
         private InterfaceMode GetDefaultMode()
         {
-            string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            settingsPath = Path.Combine(assemblyFolder, "Settings.json");
-
             LazyOrbitSettings settings;
             try
             {
-                settings = JsonConvert.DeserializeObject<LazyOrbitSettings>(File.ReadAllText(settingsPath));
+                settings = JsonConvert.DeserializeObject<LazyOrbitSettings>(File.ReadAllText(SettingsPath));
             }
             catch (FileNotFoundException)
             {
@@ -492,8 +495,7 @@ namespace LazyOrbit
             // I don't like this either. Pls fix.
             yield return new WaitForSeconds(1);
 
-            Sprite icon = Sprite.Create(CreateCircleTexture(24, 11, 2, Color.white), new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
-            appButton = AddButton("Lazy Orbit", icon, "BTN-LazyOrbitButton", ToggleButton);
+            appButton = AddButton("Lazy Orbit", LoadIcon(), "BTN-LazyOrbitButton", ToggleButton);
         }
 
         GameObject AddButton(string buttonText, Sprite buttonIcon, string buttonId, Action<bool> function)
@@ -502,7 +504,7 @@ namespace LazyOrbit
 
             // Say the magic words...
             GameObject list = GameObject.Find("GameManager/Default Game Instance(Clone)/UI Manager(Clone)/Popup Canvas/Container/ButtonBar/BTN-App-Tray/appbar-others-group");
-            GameObject resourceManger = list.GetChild("BTN-Resource-Manager");
+            GameObject resourceManger = list?.GetChild("BTN-Resource-Manager");
 
             if (list == null || resourceManger == null)
             {
@@ -512,12 +514,11 @@ namespace LazyOrbit
 
             // Clone the resource manager button.
             GameObject appButton = Instantiate(resourceManger, list.transform);
-            appButton.name = "LazyOrbitButton";
+            appButton.name = buttonId;
 
             // Change the text.
             TextMeshProUGUI text = appButton.GetChild("Content").GetChild("TXT-title").GetComponent<TextMeshProUGUI>();
-            text.text = "Lazy Orbit";
-            //text.gameObject.SetActive(true);
+            text.text = buttonText;
 
             // Change the icon.
             GameObject icon = appButton.GetChild("Content").GetChild("GRP-icon");
@@ -528,12 +529,7 @@ namespace LazyOrbit
             ToggleExtended utoggle = appButton.GetComponent<ToggleExtended>();
             utoggle.onValueChanged.AddListener(state => function(state));
 
-            // Fix the indicator's position and orientation.
-            //GameObject indicator = icon.GetChild("ELE-state");
-            //indicator.transform.localPosition = new Vector3(-18, 0, 0);
-            //indicator.transform.eulerAngles = new Vector3(0, 0, 90);
-
-            // Set the initial state of the toggle.
+            // Set the initial state of the button.
             UIValue_WriteBool_Toggle toggle = appButton.GetComponent<UIValue_WriteBool_Toggle>();
             toggle.BindValue(new Property<bool>(false));
 
@@ -549,51 +545,13 @@ namespace LazyOrbit
         void ToggleButton(bool toggle) =>
             drawUI = toggle;
 
-        private static Texture2D CreateCircleTexture(int size, int radius, int lineThickness, Color colour)
+        private Sprite LoadIcon()
         {
-            // Create new texture and clear it.
+            byte[] fileContent = File.ReadAllBytes(Path.Combine(AssemblyFolder, "icon.png"));
+            Texture2D tex = new Texture2D(24, 24, TextureFormat.ARGB32, false);
+            ImageConversion.LoadImage(tex, fileContent);
 
-            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Trilinear;
-
-            Color[] clearColours = new Color[size * size];
-            for (int i = 0; i < clearColours.Length; i++)
-                clearColours[i] = Color.clear;
-
-            texture.SetPixels(clearColours);
-
-            DrawCircle(radius, size, texture, colour, lineThickness);
-            DrawCircle(radius - 3, size, texture, colour, lineThickness);
-            DrawCircle(radius - 3, size, texture, colour, lineThickness);
-
-            // Update texture.
-            texture.Apply();
-
-            return texture;
-        }
-
-        static void DrawCircle(int radius, int size, Texture2D texture, Color colour, int lineThickness)
-        {
-            // Draw circle.
-
-            float rSquared = radius * radius;
-            int x = size / 2;
-            int y = size / 2;
-
-            for (int u = x - radius; u < x + radius + 1; u++)
-                for (int v = y - radius; v < y + radius + 1; v++)
-                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
-                        texture.SetPixel(u, v, colour);
-
-            // Remove interior.
-
-            radius -= lineThickness;
-            rSquared = radius * radius;
-
-            for (int u = x - radius; u < x + radius + 1; u++)
-                for (int v = y - radius; v < y + radius + 1; v++)
-                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
-                        texture.SetPixel(u, v, Color.clear);
+            return Sprite.Create(tex, new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
         }
 
         #endregion
@@ -620,7 +578,6 @@ namespace LazyOrbit
             LazyOrbit.instance.CreateButton();
     }
 }
-
 
 /*private GUISkin _spaceWarpConsoleSkin = null;
 public virtual GUISkin Skin
