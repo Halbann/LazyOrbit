@@ -36,7 +36,15 @@ namespace LazyOrbit
         public static bool loaded = false;
         private static GameObject appButton;
         public static LazyOrbit instance;
-        private static string settingsPath;
+
+        // Paths.
+        private static string _assemblyFolder;
+        private static string AssemblyFolder =>
+            _assemblyFolder ?? (_assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+
+        private static string _settingsPath;
+        private static string SettingsPath =>
+            _settingsPath ?? (_settingsPath = Path.Combine(AssemblyFolder, "Settings.json"));
 
         // GUI.
         private static bool guiLoaded = false;
@@ -48,6 +56,9 @@ namespace LazyOrbit
         private static Vector2 scrollPositionBodies;
         private static Vector2 scrollPositionVessels;
         private static Color labelColor;
+        private static GameState[] validScenes = new[] { GameState.FlightView, GameState.Map3DView };
+
+        private static bool ValidScene => validScenes.Contains(GameManager.Instance.Game.GlobalGameState.GetState());
 
         // Orbit.
         private static float altitudeKM = 100;
@@ -119,6 +130,9 @@ namespace LazyOrbit
 
             loaded = true;
             instance = this;
+
+            gameObject.hideFlags = HideFlags.HideAndDontSave;
+            DontDestroyOnLoad(gameObject);
 
             interfaceMode = GetDefaultMode();
 
@@ -462,26 +476,20 @@ namespace LazyOrbit
 
         private void SaveDefaultMode(InterfaceMode mode)
         {
-            if (settingsPath == null)
-                return;
-
             LazyOrbitSettings settings = new LazyOrbitSettings()
             {
                 defaultMode = mode
             };
 
-            File.WriteAllText(settingsPath, JsonConvert.SerializeObject(settings));
+            File.WriteAllText(SettingsPath, JsonConvert.SerializeObject(settings));
         }
 
         private InterfaceMode GetDefaultMode()
         {
-            string assemblyFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            settingsPath = Path.Combine(assemblyFolder, "Settings.json");
-
             LazyOrbitSettings settings;
             try
             {
-                settings = JsonConvert.DeserializeObject<LazyOrbitSettings>(File.ReadAllText(settingsPath));
+                settings = JsonConvert.DeserializeObject<LazyOrbitSettings>(File.ReadAllText(SettingsPath));
             }
             catch (FileNotFoundException)
             {
@@ -497,49 +505,11 @@ namespace LazyOrbit
 
         private static Texture2D CreateCircleTexture(int size, int radius, int lineThickness, Color colour)
         {
-            // Create new texture and clear it.
+            byte[] fileContent = File.ReadAllBytes(Path.Combine(AssemblyFolder, "icon.png"));
+            Texture2D tex = new Texture2D(24, 24, TextureFormat.ARGB32, false);
+            ImageConversion.LoadImage(tex, fileContent);
 
-            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            texture.filterMode = FilterMode.Trilinear;
-
-            Color[] clearColours = new Color[size * size];
-            for (int i = 0; i < clearColours.Length; i++)
-                clearColours[i] = Color.clear;
-
-            texture.SetPixels(clearColours);
-
-            DrawCircle(radius, size, texture, colour, lineThickness);
-            DrawCircle(radius - 3, size, texture, colour, lineThickness);
-            DrawCircle(radius - 3, size, texture, colour, lineThickness);
-
-            // Update texture.
-            texture.Apply();
-
-            return texture;
-        }
-
-        static void DrawCircle(int radius, int size, Texture2D texture, Color colour, int lineThickness)
-        {
-            // Draw circle.
-
-            float rSquared = radius * radius;
-            int x = size / 2;
-            int y = size / 2;
-
-            for (int u = x - radius; u < x + radius + 1; u++)
-                for (int v = y - radius; v < y + radius + 1; v++)
-                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
-                        texture.SetPixel(u, v, colour);
-
-            // Remove interior.
-
-            radius -= lineThickness;
-            rSquared = radius * radius;
-
-            for (int u = x - radius; u < x + radius + 1; u++)
-                for (int v = y - radius; v < y + radius + 1; v++)
-                    if ((x - u) * (x - u) + (y - v) * (y - v) < rSquared)
-                        texture.SetPixel(u, v, Color.clear);
+            return Sprite.Create(tex, new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
         }
 
         #endregion
@@ -586,7 +556,6 @@ namespace LazyOrbit
         public override float Height => 0;
     }
 }
-
 
 /*private GUISkin _spaceWarpConsoleSkin = null;
 public virtual GUISkin Skin

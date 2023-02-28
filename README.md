@@ -1,4 +1,4 @@
-# LazyOrbit v0.2.0
+# LazyOrbit v0.3.0
 
 Lazy Orbit is a simple KSP2 mod for settings a vessel's orbit altitude. Open the GUI with ALT+H, select a body and an altitude, and press Set Orbit. Great for testing and modding, don't use it for anything nefarious!
 
@@ -10,8 +10,8 @@ https://spacedock.info/mod/3257/Space%20Warp
 After running the game once with Space Warp installed, place the extracted 'LazyOrbit' mod folder here: 
 `steamapps\common\Kerbal Space Program 2\SpaceWarp\Mods`
 
-You can also load LazyOrbit via BepInEx using the SpaceWarp loader for BepInEx:
-https://spacedock.info/mod/3265/SpaceWarp%20loader%20for%20BepInEx
+For BepInEx users, there is a version of Space Warp that can be loaded as a BepInEx plugin:
+https://github.com/SpaceWarpDev/SpaceWarp/releases/download/spacewarp-0.2.5/space-warp-release-0.2.5-bepinex.zip
 
 # Contributors
 
