@@ -102,7 +102,7 @@ namespace LazyOrbit
         private static InterfaceMode interfaceMode = InterfaceMode.Simple;
         private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
 
-        private LazyOrbitMenu _menu;
+        private LazyOrbitMenu menu;
         
         private InterfaceMode CurrentInterfaceMode
         {
@@ -137,8 +137,11 @@ namespace LazyOrbit
             interfaceMode = GetDefaultMode();
 
             ManagerLocator.TryGet(out SpaceWarpManager manager);
-
-            _menu = manager.RegisterGameToolbarMenu<LazyOrbitMenu>("Lazy Orbit v0.3.5",Sprite.Create(CreateCircleTexture(24, 11, 2, Color.white), new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f)),"BTN-LazyOrbitButton");
+            menu = manager.RegisterGameToolbarMenu<LazyOrbitMenu>(
+                "Lazy Orbit",
+                "Lazy Orbit v0.3.5",
+                "BTN-LazyOrbitButton",
+                ToolbarMenu.LoadIcon());
         }
 
         void Update()
@@ -146,8 +149,8 @@ namespace LazyOrbit
             //if (new[] { GameState.FlightView, GameState.Map3DView }.Contains(GameManager.Instance.Game.GlobalGameState.GetState()))
             //    return;
 
-            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H))
-                _menu.ToggleGUI();
+            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
+                menu.ToggleGUI();
         }
 
         // void OnGUI()
@@ -192,18 +195,18 @@ namespace LazyOrbit
 
         internal void FillWindow(int windowID)
         {
-            
-            if (!guiLoaded)
-            {
-                GetStyles();
-            }
-
-
-            if ((activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
+            if (ValidScene && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
             {
                 GUILayout.Label("No active vessel", errorStyle);
                 return;
             }
+
+            if (!guiLoaded)
+                GetStyles();
+
+            //if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "X"))
+            //    menu.ToggleGui();
+
             GUILayout.BeginVertical();
             
             GUILayout.Label($"Active Vessel: {activeVessel.DisplayName}");
@@ -500,19 +503,6 @@ namespace LazyOrbit
         }
 
         #endregion
-
-        #region Button
-
-        private static Texture2D CreateCircleTexture(int size, int radius, int lineThickness, Color colour)
-        {
-            byte[] fileContent = File.ReadAllBytes(Path.Combine(AssemblyFolder, "icon.png"));
-            Texture2D tex = new Texture2D(24, 24, TextureFormat.ARGB32, false);
-            ImageConversion.LoadImage(tex, fileContent);
-
-            return Sprite.Create(tex, new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
-        }
-
-        #endregion
     }
 
     public class LazyOrbitSettings
@@ -528,11 +518,8 @@ namespace LazyOrbit
         Rendezvous,
     }
 
-
-
     public class LazyOrbitMenu : ToolbarMenu
     {
-        //THIS
         public override void DrawWindow(int windowID)
         {
             if (LazyOrbitMod != null)
@@ -540,6 +527,7 @@ namespace LazyOrbit
                 LazyOrbitMod.FillWindow(windowID);
             }
         }
+
         private LazyOrbit _lazyOrbit = null;
         public LazyOrbit LazyOrbitMod  {
             get
@@ -550,10 +538,11 @@ namespace LazyOrbit
             }
         }
 
-        //THIS
         public override float Width => LazyOrbitMod.windowWidth;
-        //THIS
         public override float Height => 0;
+
+        public override float X => (Screen.width * 0.7f) - (LazyOrbitMod.windowWidth / 2);
+        public override float Y => (Screen.height / 2) - (LazyOrbitMod.windowHeight / 2);
     }
 }
 
