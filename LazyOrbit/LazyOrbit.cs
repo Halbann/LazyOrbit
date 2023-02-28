@@ -3,26 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Reflection;
-using System.Collections;
 
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using Newtonsoft.Json;
 
 using KSP.Sim.impl;
 using KSP.Game;
-using KSP.Api.CoreTypes;
 using KSP.Sim.ResourceSystem;
-using KSP.Api;
-using KSP.UI.Flight;
-using KSP.UI.Binding;
 
-using SpaceWarp.API.Mods;
-using HarmonyLib;
 using SpaceWarp.API;
-using SpaceWarp.API.Managers;
-using SpaceWarp.API.Toolbar;
+using SpaceWarp.API.Mods;
 
 
 namespace LazyOrbit
@@ -34,7 +24,6 @@ namespace LazyOrbit
 
         // Main.
         public static bool loaded = false;
-        private static GameObject appButton;
         public static LazyOrbit instance;
 
         // Paths.
@@ -102,8 +91,6 @@ namespace LazyOrbit
         private static InterfaceMode interfaceMode = InterfaceMode.Simple;
         private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
 
-        private LazyOrbitMenu menu;
-        
         private InterfaceMode CurrentInterfaceMode
         {
             get => interfaceMode;
@@ -136,41 +123,42 @@ namespace LazyOrbit
 
             interfaceMode = GetDefaultMode();
 
-            ManagerLocator.TryGet(out SpaceWarpManager manager);
-            menu = manager.RegisterGameToolbarMenu<LazyOrbitMenu>(
+            SpaceWarpManager.RegisterAppButton(
                 "Lazy Orbit",
-                "Lazy Orbit v0.3.5",
                 "BTN-LazyOrbitButton",
-                ToolbarMenu.LoadIcon());
+                SpaceWarpManager.LoadIcon(),
+                ToggleButton);
+        }
+
+        void Awake()
+        {
+            windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         }
 
         void Update()
         {
-            //if (new[] { GameState.FlightView, GameState.Map3DView }.Contains(GameManager.Instance.Game.GlobalGameState.GetState()))
-            //    return;
-
             if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
-                menu.ToggleGUI();
+                drawUI = !drawUI;
         }
 
-        // void OnGUI()
-        // {
-        //     if (drawUI
-        //         && GameManager.Instance.Game.GlobalGameState.GetState() == GameState.FlightView
-        //         && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
-        //     {
-        //         if (!guiLoaded)
-        //             GetStyles();
-        //
-        //         windowRect = GUILayout.Window(
-        //             GUIUtility.GetControlID(FocusType.Passive),
-        //             windowRect,
-        //             FillWindow,
-        //             "Lazy Orbit v0.3.0",
-        //             GUILayout.Height(0),
-        //             GUILayout.Width(350));
-        //     }
-        // }
+        void OnGUI()
+        {
+            if (drawUI && ValidScene)
+            {
+                if (!guiLoaded)
+                    GetStyles();
+
+                GUI.skin = SpaceWarpManager.Skin;
+
+                windowRect = GUILayout.Window(
+                    GUIUtility.GetControlID(FocusType.Passive),
+                    windowRect,
+                    FillWindow,
+                    "Lazy Orbit v0.3.0",
+                    GUILayout.Height(0),
+                    GUILayout.Width(350));
+            }
+        }
 
         #endregion
 
@@ -193,19 +181,16 @@ namespace LazyOrbit
             guiLoaded = true;
         }
 
-        internal void FillWindow(int windowID)
+        private void FillWindow(int windowID)
         {
-            if (ValidScene && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
+            if ((activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
             {
                 GUILayout.Label("No active vessel", errorStyle);
                 return;
             }
 
-            if (!guiLoaded)
-                GetStyles();
-
-            //if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "X"))
-            //    menu.ToggleGui();
+            if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "x"))
+                ToggleButton(false);
 
             GUILayout.BeginVertical();
             
@@ -350,7 +335,7 @@ namespace LazyOrbit
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Target: ", GUILayout.Width(windowWidth / 2));
+            GUILayout.Label("Target: ", GUILayout.Width(0));
             if (!selectingVessel)
             {
                 if (GUILayout.Button(target.DisplayName))
@@ -359,7 +344,7 @@ namespace LazyOrbit
             else
             {
                 GUILayout.BeginVertical(boxStyle);
-                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150), GUILayout.Width(windowWidth / 2));
+                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150));
                 foreach (VesselComponent vessel in allVessels)
                 {
                     if (GUILayout.Button(vessel.DisplayName))
@@ -406,6 +391,9 @@ namespace LazyOrbit
             }
             GUILayout.EndHorizontal();
         }
+
+        void ToggleButton(bool toggle) =>
+            drawUI = toggle;
 
         #endregion
 
@@ -517,52 +505,4 @@ namespace LazyOrbit
         Landing,
         Rendezvous,
     }
-
-    public class LazyOrbitMenu : ToolbarMenu
-    {
-        public override void DrawWindow(int windowID)
-        {
-            if (LazyOrbitMod != null)
-            {
-                LazyOrbitMod.FillWindow(windowID);
-            }
-        }
-
-        private LazyOrbit _lazyOrbit = null;
-        public LazyOrbit LazyOrbitMod  {
-            get
-            {
-                if (_lazyOrbit != null) return _lazyOrbit;
-                ModLocator.TryGet(out _lazyOrbit);
-                return _lazyOrbit;
-            }
-        }
-
-        public override float Width => LazyOrbitMod.windowWidth;
-        public override float Height => 0;
-
-        public override float X => (Screen.width * 0.7f) - (LazyOrbitMod.windowWidth / 2);
-        public override float Y => (Screen.height / 2) - (LazyOrbitMod.windowHeight / 2);
-    }
 }
-
-/*private GUISkin _spaceWarpConsoleSkin = null;
-public virtual GUISkin Skin
-{
-    get
-    {
-        if (_spaceWarpConsoleSkin == null)
-        {
-            ResourceManager.TryGetAsset($"space_warp/swconsoleui/spacewarpConsole.guiskin", out _spaceWarpConsoleSkin);
-        }
-
-        return _spaceWarpConsoleSkin;
-    }
-}
-
-public void OnGUI()
-{
-    GUI.skin = Skin;
-
-}
-*/
