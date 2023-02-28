@@ -13,7 +13,7 @@ using KSP.Sim.ResourceSystem;
 
 using SpaceWarp.API;
 using SpaceWarp.API.Mods;
-
+using KSP.UI.Binding;
 
 namespace LazyOrbit
 {
@@ -39,8 +39,8 @@ namespace LazyOrbit
         private static bool guiLoaded = false;
         private bool drawUI = false;
         private Rect windowRect;
-        internal int windowWidth = 500;
-        internal int windowHeight = 700;
+        private int windowWidth = 500;
+        private int windowHeight = 700;
         private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
         private static Vector2 scrollPositionBodies;
         private static Vector2 scrollPositionVessels;
@@ -138,7 +138,7 @@ namespace LazyOrbit
         void Update()
         {
             if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
-                drawUI = !drawUI;
+                ToggleButton(!drawUI);
         }
 
         void OnGUI()
@@ -158,6 +158,12 @@ namespace LazyOrbit
                     GUILayout.Height(0),
                     GUILayout.Width(350));
             }
+        }
+
+        void ToggleButton(bool toggle)
+        {
+            drawUI = toggle;
+            GameObject.Find("BTN-LazyOrbitButton")?.GetComponent<UIValue_WriteBool_Toggle>()?.SetValue(toggle);
         }
 
         #endregion
@@ -185,7 +191,9 @@ namespace LazyOrbit
         {
             if ((activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
             {
-                GUILayout.Label("No active vessel", errorStyle);
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("No active vessel.", errorStyle);
+                GUILayout.FlexibleSpace();
                 return;
             }
 
@@ -193,7 +201,7 @@ namespace LazyOrbit
                 ToggleButton(false);
 
             GUILayout.BeginVertical();
-            
+
             GUILayout.Label($"Active Vessel: {activeVessel.DisplayName}");
 
             // Mode selection.
@@ -391,9 +399,6 @@ namespace LazyOrbit
             }
             GUILayout.EndHorizontal();
         }
-
-        void ToggleButton(bool toggle) =>
-            drawUI = toggle;
 
         #endregion
 
