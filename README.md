@@ -1,6 +1,6 @@
 # LazyOrbit v0.3.0
 
-Lazy Orbit is a simple KSP2 mod for settings a vessel's orbit altitude. Open the GUI with ALT+H, select a body and an altitude, and press Set Orbit. Great for testing and modding, don't use it for anything nefarious!
+Lazy Orbit is a simple mod for settings a vessel's orbit, landing, and rendezvous. Open the GUI with ALT+H (or click the button in the APP.BAR), select a body and an altitude, and press Set Orbit. Great for testing and modding, don't use it for anything nefarious!
 
 
 # Installation
