@@ -3,24 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Reflection;
-using System.Collections;
 
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using Newtonsoft.Json;
 
 using KSP.Sim.impl;
 using KSP.Game;
-using KSP.Api.CoreTypes;
 using KSP.Sim.ResourceSystem;
-using KSP.Api;
-using KSP.UI.Flight;
-using KSP.UI.Binding;
 
+using SpaceWarp.API;
 using SpaceWarp.API.Mods;
-using HarmonyLib;
-
+using KSP.UI.Binding;
 
 namespace LazyOrbit
 {
@@ -31,7 +24,6 @@ namespace LazyOrbit
 
         // Main.
         public static bool loaded = false;
-        private static GameObject appButton;
         public static LazyOrbit instance;
 
         // Paths.
@@ -116,11 +108,6 @@ namespace LazyOrbit
 
         #region Main
 
-        void Awake()
-        {
-            windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
-        }
-
         public override void OnInitialized()
         {
             if (loaded)
@@ -135,29 +122,48 @@ namespace LazyOrbit
             DontDestroyOnLoad(gameObject);
 
             interfaceMode = GetDefaultMode();
+
+            SpaceWarpManager.RegisterAppButton(
+                "Lazy Orbit",
+                "BTN-LazyOrbitButton",
+                SpaceWarpManager.LoadIcon(),
+                ToggleButton);
+        }
+
+        void Awake()
+        {
+            windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         }
 
         void Update()
         {
             if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
-                drawUI = !drawUI;
+                ToggleButton(!drawUI);
         }
 
         void OnGUI()
         {
-            if (drawUI && ValidScene && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
+            if (drawUI && ValidScene)
             {
                 if (!guiLoaded)
                     GetStyles();
+
+                GUI.skin = SpaceWarpManager.Skin;
 
                 windowRect = GUILayout.Window(
                     GUIUtility.GetControlID(FocusType.Passive),
                     windowRect,
                     FillWindow,
-                    "Lazy Orbit v0.3.0",
+                    "<color=#696DFF>// LAZY ORBIT</color>",
                     GUILayout.Height(0),
                     GUILayout.Width(350));
             }
+        }
+
+        void ToggleButton(bool toggle)
+        {
+            drawUI = toggle;
+            GameObject.Find("BTN-LazyOrbitButton")?.GetComponent<UIValue_WriteBool_Toggle>()?.SetValue(toggle);
         }
 
         #endregion
@@ -183,11 +189,23 @@ namespace LazyOrbit
 
         private void FillWindow(int windowID)
         {
+            if ((activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
+            {
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("No active vessel.", errorStyle);
+                GUILayout.FlexibleSpace();
+                return;
+            }
+
+            if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "x"))
+                ToggleButton(false);
+
             GUILayout.BeginVertical();
 
             GUILayout.Label($"Active Vessel: {activeVessel.DisplayName}");
 
             // Mode selection.
+
             GUILayout.BeginHorizontal();
             CurrentInterfaceMode = (InterfaceMode)GUILayout.SelectionGrid((int)CurrentInterfaceMode, interfaceModes, 4);
             GUILayout.EndHorizontal();
@@ -326,7 +344,7 @@ namespace LazyOrbit
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Target: ", GUILayout.Width(windowWidth / 2));
+            GUILayout.Label("Target: ", GUILayout.Width(0));
             if (!selectingVessel)
             {
                 if (GUILayout.Button(target.DisplayName))
@@ -335,7 +353,7 @@ namespace LazyOrbit
             else
             {
                 GUILayout.BeginVertical(boxStyle);
-                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150), GUILayout.Width(windowWidth / 2));
+                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150));
                 foreach (VesselComponent vessel in allVessels)
                 {
                     if (GUILayout.Button(vessel.DisplayName))
@@ -479,82 +497,6 @@ namespace LazyOrbit
         }
 
         #endregion
-
-        #region Button
-
-        public void CreateButton()
-        {
-            if (appButton != null)
-                return;
-
-            StartCoroutine(CreateButtonRoutine());
-        }
-
-        private IEnumerator CreateButtonRoutine()
-        {
-            // I don't like this either. Pls fix.
-            yield return new WaitForSeconds(1);
-
-            appButton = AddButton("Lazy Orbit", LoadIcon(), "BTN-LazyOrbitButton", ToggleButton);
-        }
-
-        GameObject AddButton(string buttonText, Sprite buttonIcon, string buttonId, Action<bool> function)
-        {
-            // Find the resource manager button and "others" group.
-
-            // Say the magic words...
-            GameObject list = GameObject.Find("GameManager/Default Game Instance(Clone)/UI Manager(Clone)/Popup Canvas/Container/ButtonBar/BTN-App-Tray/appbar-others-group");
-            GameObject resourceManger = list?.GetChild("BTN-Resource-Manager");
-
-            if (list == null || resourceManger == null)
-            {
-                Logger.Info("Couldn't find appbar.");
-                return null;
-            }
-
-            // Clone the resource manager button.
-            GameObject appButton = Instantiate(resourceManger, list.transform);
-            appButton.name = buttonId;
-
-            // Change the text.
-            TextMeshProUGUI text = appButton.GetChild("Content").GetChild("TXT-title").GetComponent<TextMeshProUGUI>();
-            text.text = buttonText;
-
-            // Change the icon.
-            GameObject icon = appButton.GetChild("Content").GetChild("GRP-icon");
-            Image image = icon.GetChild("ICO-asset").GetComponent<Image>();
-            image.sprite = buttonIcon;
-
-            // Add our function call to the toggle.
-            ToggleExtended utoggle = appButton.GetComponent<ToggleExtended>();
-            utoggle.onValueChanged.AddListener(state => function(state));
-
-            // Set the initial state of the button.
-            UIValue_WriteBool_Toggle toggle = appButton.GetComponent<UIValue_WriteBool_Toggle>();
-            toggle.BindValue(new Property<bool>(false));
-
-            // Bind the action to close the tray after pressing the button.
-            IAction action = resourceManger.GetComponent<UIAction_Void_Toggle>().Action;
-            appButton.GetComponent<UIAction_Void_Toggle>().BindAction(action);
-
-            Logger.Info($"Added appbar button: {buttonId}");
-
-            return appButton;
-        }
-
-        void ToggleButton(bool toggle) =>
-            drawUI = toggle;
-
-        private Sprite LoadIcon()
-        {
-            byte[] fileContent = File.ReadAllBytes(Path.Combine(AssemblyFolder, "icon.png"));
-            Texture2D tex = new Texture2D(24, 24, TextureFormat.ARGB32, false);
-            ImageConversion.LoadImage(tex, fileContent);
-
-            return Sprite.Create(tex, new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
-        }
-
-        #endregion
     }
 
     public class LazyOrbitSettings
@@ -569,33 +511,4 @@ namespace LazyOrbit
         Landing,
         Rendezvous,
     }
-
-    [HarmonyPatch(typeof(UIFlightHud))]
-    [HarmonyPatch("Start")]
-    class LazyOrbitAppBarPatcher
-    {
-        public static void Postfix(UIFlightHud __instance) =>
-            LazyOrbit.instance.CreateButton();
-    }
 }
-
-/*private GUISkin _spaceWarpConsoleSkin = null;
-public virtual GUISkin Skin
-{
-    get
-    {
-        if (_spaceWarpConsoleSkin == null)
-        {
-            ResourceManager.TryGetAsset($"space_warp/swconsoleui/spacewarpConsole.guiskin", out _spaceWarpConsoleSkin);
-        }
-
-        return _spaceWarpConsoleSkin;
-    }
-}
-
-public void OnGUI()
-{
-    GUI.skin = Skin;
-
-}
-*/
