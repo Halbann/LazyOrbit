@@ -154,7 +154,7 @@ namespace LazyOrbit
                     GUIUtility.GetControlID(FocusType.Passive),
                     windowRect,
                     FillWindow,
-                    "Lazy Orbit v0.3.0",
+                    "<color=#696DFF>// LAZY ORBIT</color>",
                     GUILayout.Height(0),
                     GUILayout.Width(350));
             }
