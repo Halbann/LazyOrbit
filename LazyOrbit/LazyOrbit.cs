@@ -18,7 +18,7 @@ using KSP.UI.Binding;
 using SpaceWarp;
 using SpaceWarp.API.Assets;
 using SpaceWarp.API.UI;
-using SpaceWarp.API.UI.Toolbar;
+using SpaceWarp.API.UI.Appbar;
 
 namespace LazyOrbit
 {
@@ -133,7 +133,7 @@ namespace LazyOrbit
 
             interfaceMode = GetDefaultMode();
 
-            Toolbar.RegisterAppButton(
+            Appbar.RegisterAppButton(
                 "Lazy Orbit",
                 "BTN-LazyOrbitButton",
                 AssetManager.GetAsset<Texture2D>($"{SpaceWarpMetadata.ModID}/images/icon.png"),
