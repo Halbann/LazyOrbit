@@ -81,9 +81,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>"$(ProjectDir)pdb2mdb\pdb2mdb.exe" "$(TargetPath)" 
-copy /Y "$(TargetDir)$(ProjectName).dll" "C:\Program Files (x86)\Steam\steamapps\common\\Kerbal Space Program 2\SpaceWarp\Mods\LazyOrbit\bin\$(ProjectName).dll" 
-copy /Y "$(TargetDir)$(Targetname).pdb" "C:\Program Files (x86)\Steam\steamapps\common\\Kerbal Space Program 2\SpaceWarp\Mods\LazyOrbit\bin\" 
-copy /Y "$(TargetDir)$(Targetname).dll.mdb" "C:\Program Files (x86)\Steam\steamapps\common\\Kerbal Space Program 2\SpaceWarp\Mods\LazyOrbit\bin\"</PostBuildEvent>
+    <PostBuildEvent>"$(ProjectDir)pdb2mdb\pdb2mdb.exe" "$(TargetPath)"
+      copy /Y "$(TargetDir)$(ProjectName).dll" "$(ProjectDir)\..\LazyOrbitBuildTemplate\$(ProjectName).dll"
+      copy /Y "$(TargetDir)$(Targetname).pdb" "$(ProjectDir)\..\LazyOrbitBuildTemplate\"
+      copy /Y "$(TargetDir)$(Targetname).dll" "$(ProjectDir)\..\LazyOrbitBuildTemplate\"</PostBuildEvent>
   </PropertyGroup>
 </Project>
