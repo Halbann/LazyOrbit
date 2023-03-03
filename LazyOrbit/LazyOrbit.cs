@@ -3,23 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Reflection;
-
+using BepInEx;
 using UnityEngine;
 using Newtonsoft.Json;
 
 using KSP.Sim.impl;
 using KSP.Game;
+using KSP.Modding;
 using KSP.Sim.ResourceSystem;
 
 using SpaceWarp.API;
 using SpaceWarp.API.Mods;
 using KSP.UI.Binding;
+using SpaceWarp;
+using SpaceWarp.API.Assets;
+using SpaceWarp.API.UI;
+using SpaceWarp.API.UI.Toolbar;
 
 namespace LazyOrbit
 {
-    [MainMod]
-    public class LazyOrbit : Mod
+    [BepInDependency(SpaceWarpPlugin.ModGuid,SpaceWarpPlugin.ModVer)]
+    [BepInPlugin(ModGuid, ModName, ModVer)]
+    public class LazyOrbit : BaseSpaceWarpPlugin
     {
+        
+        public const string ModGuid = "com.github.halbann.lazyorbit";
+        public const string ModName = "Lazy Orbit";
+        public const string ModVer = MyPluginInfo.PLUGIN_VERSION;
         #region Fields
 
         // Main.
@@ -123,10 +133,10 @@ namespace LazyOrbit
 
             interfaceMode = GetDefaultMode();
 
-            SpaceWarpManager.RegisterAppButton(
+            Toolbar.RegisterAppButton(
                 "Lazy Orbit",
                 "BTN-LazyOrbitButton",
-                SpaceWarpManager.LoadIcon(),
+                AssetManager.GetAsset<Texture2D>($"{SpaceWarpMetadata.ModID}/images/icon.png"),
                 ToggleButton);
         }
 
@@ -148,7 +158,7 @@ namespace LazyOrbit
                 if (!guiLoaded)
                     GetStyles();
 
-                GUI.skin = SpaceWarpManager.Skin;
+                GUI.skin = Skins.ConsoleSkin;
 
                 windowRect = GUILayout.Window(
                     GUIUtility.GetControlID(FocusType.Passive),
