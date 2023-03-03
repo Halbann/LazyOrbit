@@ -3,27 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Reflection;
-using System.Collections;
 
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using Newtonsoft.Json;
 
 using KSP.Sim.impl;
 using KSP.Game;
-using KSP.Api.CoreTypes;
 using KSP.Sim.ResourceSystem;
-using KSP.Api;
-using KSP.UI.Flight;
-using KSP.UI.Binding;
 
-using SpaceWarp.API.Mods;
-using HarmonyLib;
 using SpaceWarp.API;
-using SpaceWarp.API.Managers;
-using SpaceWarp.API.Toolbar;
-
+using SpaceWarp.API.Mods;
+using KSP.UI.Binding;
 
 namespace LazyOrbit
 {
@@ -34,7 +24,6 @@ namespace LazyOrbit
 
         // Main.
         public static bool loaded = false;
-        private static GameObject appButton;
         public static LazyOrbit instance;
 
         // Paths.
@@ -50,8 +39,8 @@ namespace LazyOrbit
         private static bool guiLoaded = false;
         private bool drawUI = false;
         private Rect windowRect;
-        internal int windowWidth = 500;
-        internal int windowHeight = 700;
+        private int windowWidth = 500;
+        private int windowHeight = 700;
         private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
         private static Vector2 scrollPositionBodies;
         private static Vector2 scrollPositionVessels;
@@ -102,8 +91,6 @@ namespace LazyOrbit
         private static InterfaceMode interfaceMode = InterfaceMode.Simple;
         private static string[] interfaceModes = { "Simple", "Advanced", "Landing", "Rendezvous" };
 
-        private LazyOrbitMenu _menu;
-        
         private InterfaceMode CurrentInterfaceMode
         {
             get => interfaceMode;
@@ -136,38 +123,48 @@ namespace LazyOrbit
 
             interfaceMode = GetDefaultMode();
 
-            ManagerLocator.TryGet(out SpaceWarpManager manager);
+            SpaceWarpManager.RegisterAppButton(
+                "Lazy Orbit",
+                "BTN-LazyOrbitButton",
+                SpaceWarpManager.LoadIcon(),
+                ToggleButton);
+        }
 
-            _menu = manager.RegisterGameToolbarMenu<LazyOrbitMenu>("Lazy Orbit v0.3.5",Sprite.Create(CreateCircleTexture(24, 11, 2, Color.white), new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f)),"BTN-LazyOrbitButton");
+        void Awake()
+        {
+            windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
         }
 
         void Update()
         {
-            //if (new[] { GameState.FlightView, GameState.Map3DView }.Contains(GameManager.Instance.Game.GlobalGameState.GetState()))
-            //    return;
-
-            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H))
-                _menu.ToggleGUI();
+            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
+                ToggleButton(!drawUI);
         }
 
-        // void OnGUI()
-        // {
-        //     if (drawUI
-        //         && GameManager.Instance.Game.GlobalGameState.GetState() == GameState.FlightView
-        //         && (activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) != null)
-        //     {
-        //         if (!guiLoaded)
-        //             GetStyles();
-        //
-        //         windowRect = GUILayout.Window(
-        //             GUIUtility.GetControlID(FocusType.Passive),
-        //             windowRect,
-        //             FillWindow,
-        //             "Lazy Orbit v0.3.0",
-        //             GUILayout.Height(0),
-        //             GUILayout.Width(350));
-        //     }
-        // }
+        void OnGUI()
+        {
+            if (drawUI && ValidScene)
+            {
+                if (!guiLoaded)
+                    GetStyles();
+
+                GUI.skin = SpaceWarpManager.Skin;
+
+                windowRect = GUILayout.Window(
+                    GUIUtility.GetControlID(FocusType.Passive),
+                    windowRect,
+                    FillWindow,
+                    "<color=#696DFF>// LAZY ORBIT</color>",
+                    GUILayout.Height(0),
+                    GUILayout.Width(350));
+            }
+        }
+
+        void ToggleButton(bool toggle)
+        {
+            drawUI = toggle;
+            GameObject.Find("BTN-LazyOrbitButton")?.GetComponent<UIValue_WriteBool_Toggle>()?.SetValue(toggle);
+        }
 
         #endregion
 
@@ -190,22 +187,21 @@ namespace LazyOrbit
             guiLoaded = true;
         }
 
-        internal void FillWindow(int windowID)
+        private void FillWindow(int windowID)
         {
-            
-            if (!guiLoaded)
-            {
-                GetStyles();
-            }
-
-
             if ((activeVessel = GameManager.Instance.Game.ViewController.GetActiveSimVessel()) == null)
             {
-                GUILayout.Label("No active vessel", errorStyle);
+                GUILayout.FlexibleSpace();
+                GUILayout.Label("No active vessel.", errorStyle);
+                GUILayout.FlexibleSpace();
                 return;
             }
+
+            if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "x"))
+                ToggleButton(false);
+
             GUILayout.BeginVertical();
-            
+
             GUILayout.Label($"Active Vessel: {activeVessel.DisplayName}");
 
             // Mode selection.
@@ -226,6 +222,7 @@ namespace LazyOrbit
             }
 
             GUILayout.EndVertical();
+            GUI.DragWindow(new Rect(0, 0, 10000, 500));
         }
 
         void SimpleGUI()
@@ -347,7 +344,7 @@ namespace LazyOrbit
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Target: ", GUILayout.Width(windowWidth / 2));
+            GUILayout.Label("Target: ", GUILayout.Width(0));
             if (!selectingVessel)
             {
                 if (GUILayout.Button(target.DisplayName))
@@ -356,7 +353,7 @@ namespace LazyOrbit
             else
             {
                 GUILayout.BeginVertical(boxStyle);
-                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150), GUILayout.Width(windowWidth / 2));
+                scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150));
                 foreach (VesselComponent vessel in allVessels)
                 {
                     if (GUILayout.Button(vessel.DisplayName))
@@ -500,19 +497,6 @@ namespace LazyOrbit
         }
 
         #endregion
-
-        #region Button
-
-        private static Texture2D CreateCircleTexture(int size, int radius, int lineThickness, Color colour)
-        {
-            byte[] fileContent = File.ReadAllBytes(Path.Combine(AssemblyFolder, "icon.png"));
-            Texture2D tex = new Texture2D(24, 24, TextureFormat.ARGB32, false);
-            ImageConversion.LoadImage(tex, fileContent);
-
-            return Sprite.Create(tex, new Rect(0, 0, 24, 24), new Vector2(0.5f, 0.5f));
-        }
-
-        #endregion
     }
 
     public class LazyOrbitSettings
@@ -527,53 +511,4 @@ namespace LazyOrbit
         Landing,
         Rendezvous,
     }
-
-
-
-    public class LazyOrbitMenu : ToolbarMenu
-    {
-        //THIS
-        public override void DrawWindow(int windowID)
-        {
-            if (LazyOrbitMod != null)
-            {
-                LazyOrbitMod.FillWindow(windowID);
-            }
-        }
-        private LazyOrbit _lazyOrbit = null;
-        public LazyOrbit LazyOrbitMod  {
-            get
-            {
-                if (_lazyOrbit != null) return _lazyOrbit;
-                ModLocator.TryGet(out _lazyOrbit);
-                return _lazyOrbit;
-            }
-        }
-
-        //THIS
-        public override float Width => LazyOrbitMod.windowWidth;
-        //THIS
-        public override float Height => 0;
-    }
 }
-
-/*private GUISkin _spaceWarpConsoleSkin = null;
-public virtual GUISkin Skin
-{
-    get
-    {
-        if (_spaceWarpConsoleSkin == null)
-        {
-            ResourceManager.TryGetAsset($"space_warp/swconsoleui/spacewarpConsole.guiskin", out _spaceWarpConsoleSkin);
-        }
-
-        return _spaceWarpConsoleSkin;
-    }
-}
-
-public void OnGUI()
-{
-    GUI.skin = Skin;
-
-}
-*/
