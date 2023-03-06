@@ -26,10 +26,10 @@ namespace LazyOrbit
     [BepInPlugin(ModGuid, ModName, ModVer)]
     public class LazyOrbit : BaseSpaceWarpPlugin
     {
-        
         public const string ModGuid = "com.github.halbann.lazyorbit";
         public const string ModName = "Lazy Orbit";
         public const string ModVer = MyPluginInfo.PLUGIN_VERSION;
+
         #region Fields
 
         // Main.
