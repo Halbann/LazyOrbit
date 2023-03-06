@@ -89,7 +89,7 @@ copy /Y "$(TargetDir)$(ProjectName).dll" "%25KSP2%25\BepInEx\plugins\LazyOrbit\$
 copy /Y "$(TargetDir)$(Targetname).pdb" "%25KSP2%25\BepInEx\plugins\LazyOrbit\" 
 copy /Y "$(TargetDir)$(Targetname).dll.mdb" "%25KSP2%25\BepInEx\plugins\LazyOrbit\"
 
-copy /Y "$(TargetDir)$(ProjectName).dll" "$(ProjectDir)\..\LazyOrbitBuild\$(ProjectName).dll"
-copy /Y "$(SolutionDir)\README.md" "$(SolutionDir)\LazyOrbitBuild\readme.txt"</PostBuildEvent>
+copy /Y "$(TargetDir)$(ProjectName).dll" "$(SolutionDir)\LazyOrbitBuild\BepInEx\plugins\LazyOrbit\$(ProjectName).dll"
+copy /Y "$(SolutionDir)\README.md" "$(SolutionDir)\LazyOrbitBuild\BepInEx\plugins\LazyOrbit\readme.txt"</PostBuildEvent>
   </PropertyGroup>
 </Project>
