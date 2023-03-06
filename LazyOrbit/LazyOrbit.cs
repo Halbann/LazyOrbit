@@ -44,7 +44,7 @@ namespace LazyOrbit
 
         private static string _settingsPath;
         private static string SettingsPath =>
-            _settingsPath ?? (_settingsPath = Path.Combine(AssemblyFolder, "Settings.json"));
+            _settingsPath ?? (_settingsPath = Path.Combine(AssemblyFolder, "settings.json"));
 
         // GUI.
         private static bool guiLoaded = false;
