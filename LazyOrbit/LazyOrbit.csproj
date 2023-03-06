@@ -83,9 +83,11 @@
     <PostBuildEvent>
 "$(ProjectDir)pdb2mdb\pdb2mdb.exe" "$(TargetPath)"
 
-copy /Y "$(TargetDir)$(ProjectName).dll" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\BepInEx\plugins\LazyOrbit\$(ProjectName).dll" 
-copy /Y "$(TargetDir)$(Targetname).pdb" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\BepInEx\plugins\LazyOrbit\" 
-copy /Y "$(TargetDir)$(Targetname).dll.mdb" "G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2\BepInEx\plugins\LazyOrbit\"
+SET KSP2=G:\Games\Steam Library\steamapps\common\Kerbal Space Program 2
+
+copy /Y "$(TargetDir)$(ProjectName).dll" "%25KSP2%25\BepInEx\plugins\LazyOrbit\$(ProjectName).dll" 
+copy /Y "$(TargetDir)$(Targetname).pdb" "%25KSP2%25\BepInEx\plugins\LazyOrbit\" 
+copy /Y "$(TargetDir)$(Targetname).dll.mdb" "%25KSP2%25\BepInEx\plugins\LazyOrbit\"
 
 copy /Y "$(TargetDir)$(ProjectName).dll" "$(ProjectDir)\..\LazyOrbitBuild\$(ProjectName).dll"
 copy /Y "$(SolutionDir)\README.md" "$(SolutionDir)\LazyOrbitBuild\readme.txt"</PostBuildEvent>
