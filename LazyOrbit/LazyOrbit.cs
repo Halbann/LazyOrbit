@@ -238,57 +238,39 @@ namespace LazyOrbit
 
         void SimpleGUI()
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Altitude (km): ", GUILayout.Width(windowWidth / 2));
-            altitudeString = GUILayout.TextField(altitudeString);
-            float.TryParse(altitudeString, out altitudeKM);
-            GUILayout.EndHorizontal();
+            bool success = true;
 
+            TextField("Altitude (km):", ref altitudeString, ref altitudeKM, ref success);
             BodySelectionGUI();
 
-            if (GUILayout.Button("Set Orbit"))
-                SetOrbit();
+            ConditionalButton("Set Orbit", success, SetOrbit);
         }
+
 
         void LandingGUI()
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Latitude (Degrees):", GUILayout.Width(windowWidth / 2));
-            latitudeString = GUILayout.TextField(latitudeString);
-            float.TryParse(latitudeString, out latitude);
-            GUILayout.EndHorizontal();
+            bool success = true;
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Longitude (Degrees):", GUILayout.Width(windowWidth / 2));
-            longitudeString = GUILayout.TextField(longitudeString);
-            float.TryParse(longitudeString, out longitude);
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Height (m):", GUILayout.Width(windowWidth / 2));
-            heightString = GUILayout.TextField(heightString);
-            float.TryParse(heightString, out height);
-            GUILayout.EndHorizontal();
-
+            TextField("Latitude (Degrees):", ref latitudeString, ref latitude, ref success);
+            TextField("Longitude (Degrees):", ref longitudeString, ref longitude, ref success);
+            TextField("Height (m):", ref heightString, ref height, ref success);
             BodySelectionGUI();
 
-            if (GUILayout.Button("Land"))
-                Land();
+            ConditionalButton("Land", success, Land);
         }
 
         void AdvancedGUI()
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Semi-Major Axis (km): ", GUILayout.Width(windowWidth / 2));
-            semiMajorAxisString = GUILayout.TextField(semiMajorAxisString);
-            float.TryParse(semiMajorAxisString, out semiMajorAxisKM);
-            GUILayout.EndHorizontal();
+            bool success = true;
+
+            TextField("Semi-Major Axis (km):", ref semiMajorAxisString, ref semiMajorAxisKM, ref success);
 
             bodyRadius = GameManager.Instance.Game.CelestialBodies.GetRadius(selectedBody) / 1000f;
             apKM = (semiMajorAxisKM * (1 + eccentricity) - bodyRadius);
             peKM = (semiMajorAxisKM * (1 - eccentricity) - bodyRadius);
             apStyle.normal.textColor = apKM < 1 ? warnStyle.normal.textColor : labelColor;
             peStyle.normal.textColor = peKM < 1 ? warnStyle.normal.textColor : labelColor;
+
             GUILayout.BeginHorizontal();
             GUILayout.Label("AP (km): ", apStyle, GUILayout.Width(windowWidth / 4));
             GUILayout.Label(apKM.ToString("n2"), apStyle, GUILayout.Width(windowWidth / 4));
@@ -296,45 +278,28 @@ namespace LazyOrbit
             GUILayout.Label(peKM.ToString("n2"), peStyle, GUILayout.Width(windowWidth / 4));
             GUILayout.EndHorizontal();
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Inclination (Degrees): ", GUILayout.Width(windowWidth / 2));
-            inclinationString = GUILayout.TextField(inclinationString);
-            float.TryParse(inclinationString, out inclinationDegrees);
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Eccentricity: ", GUILayout.Width(windowWidth / 2));
-            eccentricityString = GUILayout.TextField(eccentricityString);
-            float.TryParse(eccentricityString, out eccentricity);
-            GUILayout.EndHorizontal();
+            TextField("Inclination (Degrees):", ref inclinationString, ref inclinationDegrees, ref success);
+            TextField("Eccentricity:", ref eccentricityString, ref eccentricity, ref success);
 
             if (eccentricity >= 1 || eccentricity < 0)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label("Eccentricity Must Be in Range [0,1)", errorStyle);
+                GUILayout.Label("Eccentricity must be between 0 and 1.", errorStyle);
                 GUILayout.EndHorizontal();
             }
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Longitude of Ascending Node (Degrees): ", GUILayout.Width(windowWidth / 2));
-            ascendingNodeString = GUILayout.TextField(ascendingNodeString);
-            float.TryParse(ascendingNodeString, out ascendingNode);
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Argument of Periapsis (Degrees): ", GUILayout.Width(windowWidth / 2));
-            argOfPeriapsisString = GUILayout.TextField(argOfPeriapsisString);
-            float.TryParse(argOfPeriapsisString, out argOfPeriapsis);
-            GUILayout.EndHorizontal();
+            TextField("Longitude of Ascending Node (Degrees):", ref ascendingNodeString, ref ascendingNode, ref success);
+            TextField("Argument of Periapsis (Degrees):", ref argOfPeriapsisString, ref argOfPeriapsis, ref success);
 
             BodySelectionGUI();
 
-            if (GUILayout.Button("Set Orbit"))
-                SetOrbit();
+            ConditionalButton("Set Orbit", success, SetOrbit);
         }
 
         void RendezvousGUI()
         {
+            bool success = true;
+
             allVessels = GameManager.Instance.Game.SpaceSimulation.UniverseModel.GetAllVessels();
             allVessels.Remove(activeVessel);
             allVessels.RemoveAll(v => v.IsDebris());
@@ -348,11 +313,7 @@ namespace LazyOrbit
             if (target == null)
                 target = allVessels.First();
 
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Distance (m): ", GUILayout.Width(windowWidth / 2));
-            rendezvousDistanceString = GUILayout.TextField(rendezvousDistanceString);
-            float.TryParse(rendezvousDistanceString, out rendezvousDistance);
-            GUILayout.EndHorizontal();
+            TextField("Distance (m):", ref rendezvousDistanceString, ref rendezvousDistance, ref success);
 
             GUILayout.BeginHorizontal();
             GUILayout.Label("Target: ", GUILayout.Width(0));
@@ -378,8 +339,7 @@ namespace LazyOrbit
             }
             GUILayout.EndHorizontal();
 
-            if (GUILayout.Button("Rendezvous"))
-                Rendezvous();
+            ConditionalButton("Rendezvous", success, Rendezvous);
         }
 
         // Draws the body selection GUI.
@@ -410,6 +370,32 @@ namespace LazyOrbit
                 GUILayout.EndVertical();
             }
             GUILayout.EndHorizontal();
+        }
+
+        void TextField(string label, ref string field, ref float number, ref bool success)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, GUILayout.Width(windowWidth / 2));
+
+            bool parsed = float.TryParse(field, out number);
+            if (!parsed) GUI.color = Color.red;
+            field = GUILayout.TextField(field);
+            GUI.color = Color.white;
+
+            if (success && !parsed)
+                success = false;
+
+            GUILayout.EndHorizontal();
+        }
+
+        void ConditionalButton(string text, bool condition, Action pressed)
+        {
+            GUI.enabled = condition;
+
+            if (GUILayout.Button(text))
+                pressed();
+
+            GUI.enabled = true;
         }
 
         #endregion
