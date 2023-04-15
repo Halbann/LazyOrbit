@@ -4,7 +4,7 @@
   "author": "Halban, XYZ3211, schlosrat",
   "description": "A GUI for teleporting to orbit, keybind is ALT+H.",
   "source": "https://github.com/Halbann/LazyOrbit",
-  "version": "v0.4.0",
+  "version": "v0.5.0",
   "version_check": "",
   "dependencies": [
     {

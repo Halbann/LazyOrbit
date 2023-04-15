@@ -8,7 +8,7 @@
     <AssemblyName>com.github.halbann.lazy_orbit</AssemblyName>
     <Product>Lazy Orbit</Product>
     <Description>A GUI for teleporting to orbit, keybind is ALT+H.</Description>
-    <Version>0.4.0</Version>
+    <Version>0.5.0</Version>
     <RestoreAdditionalProjectSources>
 		https://nuget.spacewarp.org/v3/index.json
 	</RestoreAdditionalProjectSources>
