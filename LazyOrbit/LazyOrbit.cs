@@ -23,14 +23,17 @@ using SpaceWarp.API.UI.Appbar;
 
 namespace LazyOrbit
 {
-    [BepInDependency(SpaceWarpPlugin.ModGuid,SpaceWarpPlugin.ModVer)]
-    [BepInPlugin(ModGuid, ModName, ModVer)]
+    [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+    [BepInDependency(SpaceWarpPlugin.ModGuid, SpaceWarpPlugin.ModVer)]
     public class LazyOrbit : BaseSpaceWarpPlugin
     {
-        public const string ModGuid = "com.github.halbann.lazyorbit";
-        public const string ModName = "Lazy Orbit";
+        // public const string ModGuid = "com.github.halbann.lazyorbit";
+        // public const string ModName = "Lazy Orbit";
         public const string ModVer = MyPluginInfo.PLUGIN_VERSION;
-
+        // These are useful in case some other mod wants to add a dependency to this one
+        public const string ModGuid = MyPluginInfo.PLUGIN_GUID;
+        public const string ModName = MyPluginInfo.PLUGIN_NAME;
+        // public const string ModVer = MyPluginInfo.PLUGIN_VERSION;
         #region Fields
 
         // Main.
@@ -52,11 +55,16 @@ namespace LazyOrbit
         private Rect windowRect;
         private int windowWidth = 500;
         private int windowHeight = 700;
-        private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle;
+        private static GUIStyle boxStyle, errorStyle, warnStyle, peStyle, apStyle, labelStyle;
         private static Vector2 scrollPositionBodies;
         private static Vector2 scrollPositionVessels;
         private static Color labelColor;
         private static GameState[] validScenes = new[] { GameState.FlightView, GameState.Map3DView };
+        private int spacingAfterEntry = -5;
+
+        // Control click through to the game
+        private bool gameInputState = true;
+        public List<String> inputFields = new List<String>();
 
         private static bool ValidScene => validScenes.Contains(GameManager.Instance.Game.GlobalGameState.GetState());
 
@@ -134,6 +142,8 @@ namespace LazyOrbit
 
             interfaceMode = GetDefaultMode();
 
+            Logger.LogInfo($"Lazy Orbit: SpaceWarpMetadata.ModID = {SpaceWarpMetadata.ModID}");
+
             Appbar.RegisterAppButton(
                 "Lazy Orbit",
                 "BTN-LazyOrbitButton",
@@ -154,6 +164,11 @@ namespace LazyOrbit
 
         void OnGUI()
         {
+            //GUIenabled = false;
+            //var gameState = Game?.GlobalGameState?.GetState();
+            //if (gameState == GameState.Map3DView) GUIenabled = true;
+            //if (gameState == GameState.FlightView) GUIenabled = true;
+
             if (drawUI && ValidScene)
             {
                 if (!guiLoaded)
@@ -168,6 +183,39 @@ namespace LazyOrbit
                     "<color=#696DFF>// LAZY ORBIT</color>",
                     GUILayout.Height(0),
                     GUILayout.Width(350));
+
+                if (gameInputState && inputFields.Contains(GUI.GetNameOfFocusedControl()))
+                {
+                    // Logger.LogDebug($"OnGUI: Disabling Game Input: Focused Item '{GUI.GetNameOfFocusedControl()}'");
+                    gameInputState = false;
+                    GameManager.Instance.Game.Input.Disable();
+                }
+                else if (!gameInputState && !inputFields.Contains(GUI.GetNameOfFocusedControl()))
+                {
+                    // Logger.LogDebug($"OnGUI: Enabling Game Input: FYI, Focused Item '{GUI.GetNameOfFocusedControl()}'");
+                    gameInputState = true;
+                    GameManager.Instance.Game.Input.Enable();
+                }
+                //if (selectingBody)
+                //{
+                //    // Do something here to disable mouse wheel control of zoom in and out.
+                //    // Intent: allow player to scroll in the scroll view without causing the game to zoom in and out
+                //    GameManager.Instance._game.MouseManager.enabled = false;
+                //}
+                //else
+                //{
+                //    // Do something here to re-enable mouse wheel control of zoom in and out.
+                //    GameManager.Instance._game.MouseManager.enabled = true;
+                //}
+            }
+            else
+            {
+                if (!gameInputState)
+                {
+                    // Logger.LogDebug($"OnGUI: Enabling Game Input due to GUI disabled: FYI, Focused Item '{GUI.GetNameOfFocusedControl()}'");
+                    gameInputState = true;
+                    GameManager.Instance.Game.Input.Enable();
+                }
             }
         }
 
@@ -187,6 +235,7 @@ namespace LazyOrbit
                 return;
 
             boxStyle = GUI.skin.GetStyle("Box");
+            labelStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
             errorStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
             warnStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
             apStyle = new GUIStyle(GUI.skin.GetStyle("Label"));
@@ -209,7 +258,11 @@ namespace LazyOrbit
             }
 
             if (GUI.Button(new Rect(windowRect.width - 18, 2, 16, 16), "x"))
+            {
+                Logger.LogDebug("FillWindow: Restoring Game Input on window close.");
+                GameManager.Instance.Game.Input.Enable();
                 ToggleButton(false);
+            }
 
             GUILayout.BeginVertical();
 
@@ -231,6 +284,18 @@ namespace LazyOrbit
                 default:
                     break;
             }
+
+            // Indication to User that its safe to type, or why vessel controls aren't working
+            GUILayout.BeginHorizontal();
+            string inputStateString = gameInputState ? "<b>Enabled</b>" : "<b>Disabled</b>";
+            GUILayout.Label("Game Input: ", labelStyle);
+            if (gameInputState)
+                GUILayout.Label(inputStateString, labelStyle);
+            else
+                GUILayout.Label(inputStateString, warnStyle);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+            GUILayout.Space(spacingAfterEntry);
 
             GUILayout.EndVertical();
             GUI.DragWindow(new Rect(0, 0, 10000, 500));
@@ -374,11 +439,16 @@ namespace LazyOrbit
 
         void TextField(string label, ref string field, ref float number, ref bool success)
         {
+            // Setup the list of input field names (most are the same as the entry string text displayed in the GUI window)
+            if (!inputFields.Contains(label))
+                inputFields.Add(label);
+
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, GUILayout.Width(windowWidth / 2));
 
             bool parsed = float.TryParse(field, out number);
             if (!parsed) GUI.color = Color.red;
+            GUI.SetNextControlName(label);
             field = GUILayout.TextField(field);
             GUI.color = Color.white;
 
