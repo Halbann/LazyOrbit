@@ -1,5 +1,8 @@
 @REM Create the zip for SpaceDock
-echo off
+echo on
+
+echo "Starting make_zip.bat"
+
 set ConfigurationName=%1
 set PROJECT_NAME=%2
 
@@ -10,7 +13,7 @@ call local_dev_options.bat
 
 set swinfo_json=..\%PROJECT_NAME%\swinfo.json
 
-@echo off
+@echo on
 @REM Title Get Version from swinfo_json.json using PowerShell with a batch file
 Set PSCMD=Powershell -C "$(GC %swinfo_json% | ConvertFrom-Json).version"
 @for /f %%a in ('%PSCMD%') do set "Ver=%%a"

@@ -1,10 +1,12 @@
 @REM used to get all dlls from skp 2 and unity. saved to externals_dll directory
 
+echo "Starting get_dlls.bat"
+
 @REM call the ksp_location
 call local_dev_options.bat
 
 @REM echo loc:%KSP2_LOCATION%
-echo off
+echo on
 
 set OUTPUT=output
 set DEST_DIR=..\external_dlls

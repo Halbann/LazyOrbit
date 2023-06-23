@@ -1,4 +1,7 @@
-echo off
+echo on
+
+echo "Starting post_build.bat"
+
 
 @REM call the local_dev_options
 call local_dev_options.bat

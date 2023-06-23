@@ -1,5 +1,7 @@
 @REM copy debug dll (unity) to ksp, useful for debuging
-echo off
+echo on
+
+echo "Starting set_debug_dll.bat"
 
 @REM call the local_dev_options
 call local_dev_options.bat

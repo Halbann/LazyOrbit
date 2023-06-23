@@ -1,6 +1,8 @@
 @REM this exemple file should be renamed to ksp_location.bat.
 @REM ksp_location.bat is git ignored and therefore can contains informations depending on dev local machine
 
+echo "Starting local_dev_options.bat"
+
 @REM set your own KSP2_LOCATION and rename me to ksp_location.bat (git ignored)
 @REM ps : don't use ""
 set KSP2_LOCATION=C:\Kerbal Space Program 2 Debug
