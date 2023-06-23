@@ -1,5 +1,5 @@
 {
-  "mod_id": "lazy_orbit",
+  "mod_id": "LazyOrbit",
   "name": "Lazy Orbit",
   "author": "Halban, XYZ3211, schlosrat",
   "description": "A GUI for teleporting to orbit, keybind is ALT+H.",
