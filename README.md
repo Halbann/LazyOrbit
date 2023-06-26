@@ -8,12 +8,12 @@ Lazy Orbit is a simple mod that allows you to set a vessel's orbit, land it on a
 1. Install [BepInEx/SpaceWarp](https://spacedock.info/mod/3277/Space%20Warp%20+%20BepInEx). (Skip if you've done this previously)
     1. Download and extract BepInEx/SpaceWarp into your game folder. If you've installed the game via Steam, then this is probably here: *C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program 2*.
 1. Download and extract [Lazy Orbit Boosted](https://spacedock.info/mod/3410/Lazy%20Orbit%20Boosted) into your game's BepInEx/plugins folder.
-    1. The mod's ZIP file contains a single BepInEx folder. You can drag that right onto your KSP2 folder (e.g., *C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program 2*) to install the mod.
-    2. Alternatively you may install the mod via CKAN
+    1. The mod's ZIP file contains a single BepInEx folder. You can drag the BepInEx folder from the ZIP right onto your KSP2 folder (e.g., *C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program 2*) to install the mod.
+    1. Alternatively you may install the mod via CKAN
     1. If done correctly, you should have the following folder structure within your KSP2 game folder: *KSP2GameFolder*/**BepInEx/plugins/LazyOrbit**.
 
 ## Compatibility
-* Tested with Kerbal Space Program 2 v0.1.2.0.22258 & SpaceWarp 1.1.3
+* Tested with Kerbal Space Program 2 v0.1.3 & SpaceWarp 1.3.0.1
 * Requires SpaceWarp 1.0.1
 
 ## Warning!
