@@ -1,5 +1,6 @@
 using BepInEx;
 using KSP.Game;
+using KSP.Messages.PropertyWatchers;
 using KSP.Sim.impl;
 using KSP.Sim.ResourceSystem;
 using KSP.UI.Binding;
@@ -359,18 +360,18 @@ namespace LazyOrbit
     {
       bool success = true;
 
-      allVessels = GameManager.Instance.Game.SpaceSimulation.UniverseModel.GetAllVessels();
-      allVessels.Remove(activeVessel);
-      allVessels.RemoveAll(v => v.IsDebris());
+      allVessels = Game.SpaceSimulation.UniverseModel.GetAllVessels();
+      List<VesselComponent> filteredVessels = new(allVessels.Where(v => !v.IsDebris() && v.GlobalId != activeVessel.GlobalId));
+      // allVessels.Remove(activeVessel);
+      // allVessels.RemoveAll(v => v.IsDebris());
 
-      if (allVessels.Count < 1)
+      if (filteredVessels.Count < 1)
       {
         GUILayout.Label("No other vessels.");
         return;
       }
 
-      if (target == null)
-        target = allVessels.First();
+      target ??= filteredVessels.First();
 
       TextField("Distance (m):", ref rendezvousDistanceString, ref rendezvousDistance, ref success);
 
@@ -385,7 +386,7 @@ namespace LazyOrbit
       {
         GUILayout.BeginVertical(boxStyle);
         scrollPositionVessels = GUILayout.BeginScrollView(scrollPositionVessels, false, true, GUILayout.Height(150));
-        foreach (VesselComponent vessel in allVessels)
+        foreach (VesselComponent vessel in filteredVessels)
         {
           if (GUILayout.Button(vessel.DisplayName))
           {
