@@ -13,7 +13,7 @@ Lazy Orbit is a simple mod that allows you to set a vessel's orbit, land it on a
     1. If done correctly, you should have the following folder structure within your KSP2 game folder: *KSP2GameFolder*/**BepInEx/plugins/LazyOrbit**.
 
 ## Compatibility
-* Tested with Kerbal Space Program 2 v0.1.3 & SpaceWarp 1.3.0.1
+* Tested with Kerbal Space Program 2 v0.1.3.1 & SpaceWarp 1.3.0.3
 * Requires SpaceWarp 1.0.1
 
 ## Warning!
