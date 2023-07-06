@@ -1,4 +1,5 @@
 using BepInEx;
+using BepInEx.Configuration;
 using KSP.Game;
 using KSP.Messages.PropertyWatchers;
 using KSP.Sim.impl;
@@ -27,6 +28,10 @@ namespace LazyOrbit
     public const string ModGuid = MyPluginInfo.PLUGIN_GUID;
     public const string ModName = MyPluginInfo.PLUGIN_NAME;
     // public const string ModVer = MyPluginInfo.PLUGIN_VERSION;
+
+    private ConfigEntry<KeyboardShortcut> _keybind;
+    private ConfigEntry<KeyboardShortcut> _keybind2;
+
     #region Fields
 
     // Main.
@@ -130,6 +135,18 @@ namespace LazyOrbit
       loaded = true;
       instance = this;
 
+      _keybind = Config.Bind(
+      new ConfigDefinition("Keybindings", "First Keybind"),
+      new KeyboardShortcut(KeyCode.H, KeyCode.LeftAlt),
+      new ConfigDescription("Keybind to open mod window")
+      );
+
+      _keybind2 = Config.Bind(
+      new ConfigDefinition("Keybindings", "Second Keybind"),
+      new KeyboardShortcut(KeyCode.H, KeyCode.RightAlt, KeyCode.AltGr),
+      new ConfigDescription("Keybind to open mod window")
+      );
+
       gameObject.hideFlags = HideFlags.HideAndDontSave;
       DontDestroyOnLoad(gameObject);
 
@@ -147,14 +164,20 @@ namespace LazyOrbit
     void Awake()
     {
       windowRect = new Rect((Screen.width * 0.7f) - (windowWidth / 2), (Screen.height / 2) - (windowHeight / 2), 0, 0);
-      if (windowRect.x < 0) windowRect.x = 0;
-      if (windowRect.y < 0) windowRect.y = 0;
+      if (windowRect.x < 0) windowRect.x = 400;
+      if (windowRect.y < 0) windowRect.y = 250;
     }
 
     void Update()
     {
-      if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.H) && ValidScene)
+      if ((_keybind != null && _keybind.Value.IsDown()) || (_keybind2 != null && _keybind2.Value.IsDown()))
+      {
         ToggleButton(!drawUI);
+        if (_keybind != null && _keybind.Value.IsDown())
+          Logger.LogDebug($"Update: UI toggled with _keybind, hotkey {_keybind.Value}");
+        if (_keybind2 != null && _keybind2.Value.IsDown())
+          Logger.LogDebug($"Update: UI toggled with _keybind2, hotkey {_keybind2.Value}");
+      }
     }
 
     void OnGUI()
